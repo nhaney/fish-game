@@ -1,4 +1,4 @@
-use crate::shared::Velocity;
+use crate::shared::{SideScrollDirection, Velocity};
 use bevy::prelude::*;
 
 /******************************************************************************
@@ -27,12 +27,19 @@ enum PlayerState {
 
 struct PlayerStats {
     boost_length: f32,
-    swim_speed: f32,
+    speed: f32,
+    acceleration: f32,
+    traction: f32,
+    stop_threshold: f32,
 }
 
 pub struct Player {
     state: PlayerState,
     stats: PlayerStats,
+}
+
+pub struct Sink {
+    weight: f32,
 }
 
 pub fn init_player(
@@ -52,42 +59,81 @@ pub fn init_player(
             state: PlayerState::Alive,
             stats: PlayerStats {
                 boost_length: 500.0,
-                swim_speed: 20.0,
+                speed: 500.0,
+                acceleration: 0.8,
+                traction: 0.2,
+                stop_threshold: 0.1,
             },
         })
-        .with(Velocity(Vec3::zero()));
+        .with(Velocity(Vec3::zero()))
+        .with(SideScrollDirection(true))
+        .with(Sink { weight: 5.0 });
 }
 
 pub fn player_movement_system(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&Player, &mut Velocity)>,
+    mut query: Query<(&Player, &mut Velocity, &mut SideScrollDirection)>,
 ) {
-    for (player, mut velocity) in &mut query.iter() {
-        let mut x_direction = 0.0;
-        let mut y_direction = 0.0;
-
-        velocity.0 = Vec3::zero();
+    for (player, mut velocity, mut facing) in &mut query.iter() {
+        let mut direction = Vec3::zero();
 
         if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
-            x_direction -= 1.0;
+            *direction.x_mut() -= 1.0;
+            facing.0 = false;
         }
 
         if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::D) {
-            x_direction += 1.0;
+            *direction.x_mut() += 1.0;
+            facing.0 = true;
         }
 
         if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::W) {
-            y_direction += 1.0;
+            *direction.y_mut() += 1.0;
         }
 
         if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::S) {
-            y_direction -= 1.0;
+            *direction.y_mut() -= 1.0;
         }
 
-        // move the paddle horizontally
-        *velocity.0.x_mut() += x_direction * player.stats.swim_speed;
-        *velocity.0.y_mut() += y_direction * player.stats.swim_speed;
+        let mut target_speed = Vec3::zero();
+
+        // determine target speed based on whether there is an input or not
+        if direction.x() < 0.0 {
+            *target_speed.x_mut() = -player.stats.speed;
+        }
+
+        if direction.x() > 0.0 {
+            *target_speed.x_mut() = player.stats.speed;
+        }
+
+        if direction.y() < 0.0 {
+            *target_speed.y_mut() = -player.stats.speed;
+        }
+
+        if direction.y() > 0.0 {
+            *target_speed.y_mut() = player.stats.speed;
+        }
+
+        // determine whether to apply traction or regular acceleration
+        let a = if target_speed == Vec3::zero() {
+            player.stats.traction
+        } else {
+            player.stats.acceleration
+        };
+
+        // calculate new player velocity based on acceleration
+        velocity.0 = a * target_speed + (1.0 - a) * velocity.0;
+
+        if velocity.0.length() < player.stats.stop_threshold {
+            velocity.0 = Vec3::zero();
+        }
 
         println!("New velocity: {:?}", velocity.0);
     }
 }
+
+pub fn sink_system(mut velocity: Mut<Velocity>, sink: &Sink) {
+    *velocity.0.y_mut() -= sink.weight;
+}
+
+pub fn player_bounds_system() {}

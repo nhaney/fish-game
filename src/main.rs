@@ -10,7 +10,9 @@ fn main() {
         .add_startup_system(initialize_game.system())
         .add_startup_system(player::init_player.system())
         .add_system(player::player_movement_system.system())
+        .add_system(player::sink_system.system())
         .add_system(shared::movement_system.system())
+        .add_system(shared::flip_sprite_system.system())
         .run();
 }
 
