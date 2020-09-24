@@ -3,7 +3,7 @@ Components and systems shared by more than one part of the game
 */
 use bevy::prelude::*;
 
-pub struct Velocity(pub Vec3);
+pub struct Velocity(pub Vec2);
 
 pub struct SideScrollDirection(pub bool);
 
