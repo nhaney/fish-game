@@ -59,7 +59,7 @@ pub fn init_player(
             state: PlayerState::Alive,
             stats: PlayerStats {
                 boost_length: 500.0,
-                speed: 500.0,
+                speed: 2000.0,
                 acceleration: 0.8,
                 traction: 0.2,
                 stop_threshold: 0.1,
@@ -136,4 +136,7 @@ pub fn sink_system(mut velocity: Mut<Velocity>, sink: &Sink) {
     *velocity.0.y_mut() -= sink.weight;
 }
 
-pub fn player_bounds_system() {}
+// change this to use a fixed area instead of the window size
+pub fn player_bounds_system(window: &Res<WindowDescriptor>, player: &Player, mut transform: Mut<Transform>) {
+    if transform.position.x
+}
