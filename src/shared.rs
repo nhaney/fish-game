@@ -17,6 +17,11 @@ impl SideScrollDirection {
     }
 }
 
+pub struct Collider {
+    pub width: f32,
+    pub height: f32,
+}
+
 pub fn movement_system(time: Res<Time>, velocity: &Velocity, mut transform: Mut<Transform>) {
     let translation = transform.translation_mut();
 

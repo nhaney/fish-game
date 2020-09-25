@@ -1,4 +1,5 @@
-use crate::shared::{SideScrollDirection, Velocity};
+use crate::arena::Arena;
+use crate::shared::{Collider, SideScrollDirection, Velocity};
 use bevy::prelude::*;
 
 /******************************************************************************
@@ -19,6 +20,9 @@ use bevy::prelude::*;
 * Starving (happens when timer runs out)
 * Sink (makes player sink in the water)
 ******************************************************************************/
+const PLAYER_WIDTH: f32 = 32.0;
+const PLAYER_HEIGHT: f32 = 32.0;
+
 enum PlayerState {
     Alive,
     IsBoosting,
@@ -27,6 +31,7 @@ enum PlayerState {
 
 struct PlayerStats {
     boost_length: f32,
+    boost_speed: f32,
     speed: f32,
     acceleration: f32,
     traction: f32,
@@ -52,22 +57,27 @@ pub fn init_player(
         .spawn(SpriteComponents {
             material: materials.add(asset_server.load("assets/player/fish1.png").unwrap().into()),
             transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-            sprite: Sprite::new(Vec2::new(32.0, 32.0)),
+            sprite: Sprite::new(Vec2::new(PLAYER_WIDTH, PLAYER_HEIGHT)),
             ..Default::default()
         })
         .with(Player {
             state: PlayerState::Alive,
             stats: PlayerStats {
-                boost_length: 500.0,
-                speed: 2000.0,
-                acceleration: 0.8,
-                traction: 0.2,
+                boost_length: 2000.0,
+                boost_speed: 2000.0,
+                speed: 500.0,
+                acceleration: 1.0,
+                traction: 1.0,
                 stop_threshold: 0.1,
             },
         })
         .with(Velocity(Vec3::zero()))
         .with(SideScrollDirection(true))
-        .with(Sink { weight: 5.0 });
+        .with(Sink { weight: 5.0 })
+        .with(Collider {
+            width: PLAYER_WIDTH,
+            height: PLAYER_HEIGHT,
+        });
 }
 
 pub fn player_movement_system(
@@ -137,6 +147,40 @@ pub fn sink_system(mut velocity: Mut<Velocity>, sink: &Sink) {
 }
 
 // change this to use a fixed area instead of the window size
-pub fn player_bounds_system(window: &Res<WindowDescriptor>, player: &Player, mut transform: Mut<Transform>) {
-    if transform.position.x
+pub fn player_bounds_system(
+    arena: Res<Arena>,
+    player: &Player,
+    mut transform: Mut<Transform>,
+    collider: &Collider,
+) {
+    let mut new_pos = transform.translation().clone();
+    println!("Player position {:?}", new_pos);
+
+    let arena_half_width = arena.width / 2.0;
+    let arena_half_height = arena.height / 2.0;
+
+    let player_half_width = collider.width / 2.0;
+    let player_half_height = collider.height / 2.0;
+
+    if new_pos.x() - player_half_width < -arena_half_width {
+        *new_pos.x_mut() = -arena_half_width + player_half_width;
+        println!("Repositioned to {:?}", new_pos);
+    }
+
+    if new_pos.x() + player_half_width > arena_half_width {
+        *new_pos.x_mut() = arena_half_width - player_half_width;
+        println!("Repositioned to {:?}", new_pos);
+    }
+
+    if new_pos.y() - player_half_height < -arena_half_height {
+        *new_pos.y_mut() = -arena_half_height + player_half_height;
+        println!("Repositioned to {:?}", new_pos);
+    }
+
+    if new_pos.y() + player_half_height > (arena_half_height + arena.offset) {
+        *new_pos.y_mut() = (arena_half_height + arena.offset) - player_half_height;
+        println!("Repositioned to {:?}", new_pos);
+    }
+
+    transform.set_translation(new_pos);
 }
