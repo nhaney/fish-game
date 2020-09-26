@@ -8,11 +8,11 @@ pub struct Velocity(pub Vec3);
 pub struct SideScrollDirection(pub bool);
 
 impl SideScrollDirection {
-    fn is_right(&self) -> bool {
+    pub fn is_right(&self) -> bool {
         self.0
     }
 
-    fn is_left(&self) -> bool {
+    pub fn is_left(&self) -> bool {
         !self.0
     }
 }

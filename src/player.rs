@@ -23,21 +23,39 @@ use bevy::prelude::*;
 const PLAYER_WIDTH: f32 = 32.0;
 const PLAYER_HEIGHT: f32 = 32.0;
 
+#[derive(Debug)]
 enum PlayerState {
-    Alive,
-    IsBoosting,
+    Normal,
+    IsBoosting(BoostState),
     Dead,
 }
 
+#[derive(Debug)]
+struct BoostState {
+    pub boost_velocity: Vec3,
+    pub boost_timer: Timer,
+}
+
+impl BoostState {
+    pub fn new(boost_velocity: Vec3, boost_duration: f32) -> Self {
+        BoostState {
+            boost_velocity,
+            boost_timer: Timer::from_seconds(boost_duration, false),
+        }
+    }
+}
+
+#[derive(Debug)]
 struct PlayerStats {
-    boost_length: f32,
     boost_speed: f32,
+    boost_duration: f32,
     speed: f32,
     acceleration: f32,
     traction: f32,
     stop_threshold: f32,
 }
 
+#[derive(Debug)]
 pub struct Player {
     state: PlayerState,
     stats: PlayerStats,
@@ -61,11 +79,11 @@ pub fn init_player(
             ..Default::default()
         })
         .with(Player {
-            state: PlayerState::Alive,
+            state: PlayerState::Normal,
             stats: PlayerStats {
-                boost_length: 2000.0,
-                boost_speed: 2000.0,
-                speed: 500.0,
+                boost_speed: 1250.0,
+                boost_duration: 0.2,
+                speed: 400.0,
                 acceleration: 1.0,
                 traction: 1.0,
                 stop_threshold: 0.1,
@@ -80,48 +98,36 @@ pub fn init_player(
         });
 }
 
-pub fn player_movement_system(
+// TODO: Change to use specific player command events
+pub fn normal_player_movement_system(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&Player, &mut Velocity, &mut SideScrollDirection)>,
+    mut player: Mut<Player>,
+    mut velocity: Mut<Velocity>,
+    mut facing: Mut<SideScrollDirection>,
 ) {
-    for (player, mut velocity, mut facing) in &mut query.iter() {
-        let mut direction = Vec3::zero();
+    if let PlayerState::Normal = player.state {
+        let mut target_speed = Vec3::zero();
 
         if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
-            *direction.x_mut() -= 1.0;
+            *target_speed.x_mut() -= player.stats.speed;
             facing.0 = false;
         }
 
         if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::D) {
-            *direction.x_mut() += 1.0;
+            *target_speed.x_mut() += player.stats.speed;
             facing.0 = true;
         }
 
         if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::W) {
-            *direction.y_mut() += 1.0;
+            *target_speed.y_mut() += player.stats.speed;
         }
 
         if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::S) {
-            *direction.y_mut() -= 1.0;
+            *target_speed.y_mut() -= player.stats.speed;
         }
 
-        let mut target_speed = Vec3::zero();
-
-        // determine target speed based on whether there is an input or not
-        if direction.x() < 0.0 {
-            *target_speed.x_mut() = -player.stats.speed;
-        }
-
-        if direction.x() > 0.0 {
-            *target_speed.x_mut() = player.stats.speed;
-        }
-
-        if direction.y() < 0.0 {
-            *target_speed.y_mut() = -player.stats.speed;
-        }
-
-        if direction.y() > 0.0 {
-            *target_speed.y_mut() = player.stats.speed;
+        if keyboard_input.pressed(KeyCode::Space) {
+            start_boost(&mut player, &facing, &target_speed);
         }
 
         // determine whether to apply traction or regular acceleration
@@ -137,24 +143,62 @@ pub fn player_movement_system(
         if velocity.0.length() < player.stats.stop_threshold {
             velocity.0 = Vec3::zero();
         }
-
-        println!("New velocity: {:?}", velocity.0);
     }
+}
+
+fn start_boost(player: &mut Player, facing: &SideScrollDirection, target_speed: &Vec3) {
+    // if not moving, boost in the direction that the player is facing
+    let boost_direction = if *target_speed == Vec3::zero() {
+        if facing.is_right() {
+            Vec3::unit_x()
+        } else {
+            -Vec3::unit_x()
+        }
+    } else {
+        target_speed.normalize()
+    };
+
+    // change state and specify velocity of the boost
+    player.state = PlayerState::IsBoosting(BoostState::new(
+        boost_direction * player.stats.boost_speed,
+        player.stats.boost_duration,
+    ));
+
+    println!("Started boost state: {:?}", player.state);
+}
+
+pub fn boost_player_movement_system(
+    time: Res<Time>,
+    mut player: Mut<Player>,
+    mut velocity: Mut<Velocity>,
+) {
+    if let PlayerState::IsBoosting(ref mut boost_state) = player.state {
+        velocity.0 = boost_state.boost_velocity;
+
+        boost_state.boost_timer.tick(time.delta_seconds);
+
+        if boost_state.boost_timer.finished {
+            end_boost(&mut player);
+        }
+    }
+}
+
+fn end_boost(player: &mut Player) {
+    println!("Finished boost");
+    player.state = PlayerState::Normal;
 }
 
 pub fn sink_system(mut velocity: Mut<Velocity>, sink: &Sink) {
     *velocity.0.y_mut() -= sink.weight;
 }
 
-// change this to use a fixed area instead of the window size
 pub fn player_bounds_system(
     arena: Res<Arena>,
-    player: &Player,
+    _player: &Player,
     mut transform: Mut<Transform>,
     collider: &Collider,
 ) {
     let mut new_pos = transform.translation().clone();
-    println!("Player position {:?}", new_pos);
 
     let arena_half_width = arena.width / 2.0;
     let arena_half_height = arena.height / 2.0;
