@@ -21,11 +21,13 @@ fn main() {
         .add_startup_system(player::init_player.system())
         .add_startup_system(arena::initialize_arena.system())
         .add_system(player::normal_player_movement_system.system())
+        .add_system(player::boost_cooldown_system.system())
+        .add_system(player::start_boost_system.system())
         .add_system(player::boost_player_movement_system.system())
         .add_system(player::sink_system.system())
         .add_system(shared::movement_system.system())
-        .add_system(shared::flip_sprite_system.system())
         .add_system(player::player_bounds_system.system())
+        .add_system(shared::flip_sprite_system.system())
         .run();
 }
 

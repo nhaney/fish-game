@@ -19,19 +19,53 @@ use bevy::prelude::*;
 * Reeling (happens when hooked)
 * Starving (happens when timer runs out)
 * Sink (makes player sink in the water)
+
+# Boost cooldown options:
+
+1. Add component after boost ends that is a cooldown timer
+2.
+
 ******************************************************************************/
 const PLAYER_WIDTH: f32 = 32.0;
 const PLAYER_HEIGHT: f32 = 32.0;
 
 #[derive(Debug)]
-enum PlayerState {
-    Normal,
-    IsBoosting(BoostState),
-    Dead,
+pub struct NormalState;
+
+impl NormalState {
+    fn start_boost(
+        commands: &mut Commands,
+        entity: Entity,
+        player: &Player,
+        facing: &SideScrollDirection,
+        target_speed: &Vec3,
+    ) {
+        // if not moving, boost in the direction that the player is facing
+        let boost_direction = if *target_speed == Vec3::zero() {
+            if facing.is_right() {
+                Vec3::unit_x()
+            } else {
+                -Vec3::unit_x()
+            }
+        } else {
+            target_speed.normalize()
+        };
+
+        // change state and specify velocity of the boost
+        commands.insert_one(
+            entity,
+            BoostState::new(
+                boost_direction * player.stats.boost_speed,
+                player.stats.boost_duration,
+            ),
+        );
+        commands.remove_one::<Self>(entity);
+        println!("Started boost state");
+    }
 }
 
 #[derive(Debug)]
-struct BoostState {
+pub struct BoostState {
     pub boost_velocity: Vec3,
     pub boost_timer: Timer,
 }
@@ -43,12 +77,26 @@ impl BoostState {
             boost_timer: Timer::from_seconds(boost_duration, false),
         }
     }
+
+    pub fn end_boost(commands: &mut Commands, player: &mut Player, entity: Entity) {
+        println!("Finished boost, starting cooldown timer");
+        commands.insert_one(
+            entity,
+            BoostCooldown(Timer::from_seconds(player.stats.boost_cooldown, false)),
+        );
+        commands.insert_one(entity, NormalState);
+        commands.remove_one::<Self>(entity);
+    }
 }
+
+#[derive(Debug)]
+pub struct BoostCooldown(Timer);
 
 #[derive(Debug)]
 struct PlayerStats {
     boost_speed: f32,
     boost_duration: f32,
+    boost_cooldown: f32,
     speed: f32,
     acceleration: f32,
     traction: f32,
@@ -57,7 +105,6 @@ struct PlayerStats {
 
 #[derive(Debug)]
 pub struct Player {
-    state: PlayerState,
     stats: PlayerStats,
 }
 
@@ -79,10 +126,10 @@ pub fn init_player(
             ..Default::default()
         })
         .with(Player {
-            state: PlayerState::Normal,
             stats: PlayerStats {
                 boost_speed: 1250.0,
-                boost_duration: 0.2,
+                boost_duration: 0.1,
+                boost_cooldown: 0.1,
                 speed: 400.0,
                 acceleration: 1.0,
                 traction: 1.0,
@@ -95,27 +142,67 @@ pub fn init_player(
         .with(Collider {
             width: PLAYER_WIDTH,
             height: PLAYER_HEIGHT,
-        });
+        })
+        .with(NormalState);
 }
 
 // TODO: Change to use specific player command events
 pub fn normal_player_movement_system(
     keyboard_input: Res<Input<KeyCode>>,
-    mut player: Mut<Player>,
+    player: &Player,
     mut velocity: Mut<Velocity>,
     mut facing: Mut<SideScrollDirection>,
+    _state: &NormalState,
 ) {
-    if let PlayerState::Normal = player.state {
+    let mut target_speed = Vec3::zero();
+
+    if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
+        *target_speed.x_mut() -= player.stats.speed;
+        facing.0 = false;
+    }
+
+    if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::D) {
+        *target_speed.x_mut() += player.stats.speed;
+        facing.0 = true;
+    }
+
+    if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::W) {
+        *target_speed.y_mut() += player.stats.speed;
+    }
+
+    if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::S) {
+        *target_speed.y_mut() -= player.stats.speed;
+    }
+
+    // determine whether to apply traction or regular acceleration
+    let a = if target_speed == Vec3::zero() {
+        player.stats.traction
+    } else {
+        player.stats.acceleration
+    };
+
+    // calculate new player velocity based on acceleration
+    velocity.0 = a * target_speed + (1.0 - a) * velocity.0;
+
+    if velocity.0.length() < player.stats.stop_threshold {
+        velocity.0 = Vec3::zero();
+    }
+}
+
+pub fn start_boost_system(
+    mut commands: Commands,
+    keyboard_input: Res<Input<KeyCode>>,
+    mut query: Query<Without<BoostCooldown, (&NormalState, &Player, &SideScrollDirection, Entity)>>,
+) {
+    for (_state, player, facing, entity) in &mut query.iter() {
         let mut target_speed = Vec3::zero();
 
         if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
             *target_speed.x_mut() -= player.stats.speed;
-            facing.0 = false;
         }
 
         if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::D) {
             *target_speed.x_mut() += player.stats.speed;
-            facing.0 = true;
         }
 
         if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::W) {
@@ -127,65 +214,40 @@ pub fn normal_player_movement_system(
         }
 
         if keyboard_input.pressed(KeyCode::Space) {
-            start_boost(&mut player, &facing, &target_speed);
-        }
-
-        // determine whether to apply traction or regular acceleration
-        let a = if target_speed == Vec3::zero() {
-            player.stats.traction
-        } else {
-            player.stats.acceleration
-        };
-
-        // calculate new player velocity based on acceleration
-        velocity.0 = a * target_speed + (1.0 - a) * velocity.0;
-
-        if velocity.0.length() < player.stats.stop_threshold {
-            velocity.0 = Vec3::zero();
+            NormalState::start_boost(&mut commands, entity, player, &facing, &target_speed);
         }
     }
-}
-
-fn start_boost(player: &mut Player, facing: &SideScrollDirection, target_speed: &Vec3) {
-    // if not moving, boost in the direction that the player is facing
-    let boost_direction = if *target_speed == Vec3::zero() {
-        if facing.is_right() {
-            Vec3::unit_x()
-        } else {
-            -Vec3::unit_x()
-        }
-    } else {
-        target_speed.normalize()
-    };
-
-    // change state and specify velocity of the boost
-    player.state = PlayerState::IsBoosting(BoostState::new(
-        boost_direction * player.stats.boost_speed,
-        player.stats.boost_duration,
-    ));
-
-    println!("Started boost state: {:?}", player.state);
 }
 
 pub fn boost_player_movement_system(
+    mut commands: Commands,
     time: Res<Time>,
     mut player: Mut<Player>,
     mut velocity: Mut<Velocity>,
+    mut boost_state: Mut<BoostState>,
+    entity: Entity,
 ) {
-    if let PlayerState::IsBoosting(ref mut boost_state) = player.state {
-        velocity.0 = boost_state.boost_velocity;
+    velocity.0 = boost_state.boost_velocity;
 
-        boost_state.boost_timer.tick(time.delta_seconds);
+    boost_state.boost_timer.tick(time.delta_seconds);
 
-        if boost_state.boost_timer.finished {
-            end_boost(&mut player);
-        }
+    if boost_state.boost_timer.finished {
+        BoostState::end_boost(&mut commands, &mut player, entity);
     }
 }
 
-fn end_boost(player: &mut Player) {
-    println!("Finished boost");
-    player.state = PlayerState::Normal;
+pub fn boost_cooldown_system(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut boost_cooldown: Mut<BoostCooldown>,
+    entity: Entity,
+) {
+    boost_cooldown.0.tick(time.delta_seconds);
+
+    if boost_cooldown.0.finished {
+        println!("Boost cooldown finished");
+        commands.remove_one::<BoostCooldown>(entity);
+    }
 }
 
 pub fn sink_system(mut velocity: Mut<Velocity>, sink: &Sink) {
