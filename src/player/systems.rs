@@ -1,116 +1,13 @@
-use crate::arena::Arena;
-use crate::shared::{Collider, SideScrollDirection, Velocity};
 use bevy::prelude::*;
 
-/******************************************************************************
-# Fish components:
-## Components always on
-* Velocity (Speed of fish)
-* Transform (position and orientation of fish)
-* Player
-  - state
-  - stats - boost length, speed, etc.
-* Collider (AABB)
-## display
-* Sprite (image of fish)
-* Animation (Animations of the fish)
-* Direction (For direction the sprite is facing)
-## Conditional Components
-* Reeling (happens when hooked)
-* Starving (happens when timer runs out)
-* Sink (makes player sink in the water)
+use super::components::{state, Player, PlayerStats, Sink};
+use crate::shared::{
+    arena::Arena,
+    components::{Collider, SideScrollDirection, Velocity},
+};
 
-# Boost cooldown options:
-
-1. Add component after boost ends that is a cooldown timer
-2.
-
-******************************************************************************/
 const PLAYER_WIDTH: f32 = 32.0;
 const PLAYER_HEIGHT: f32 = 32.0;
-
-#[derive(Debug)]
-pub struct NormalState;
-
-impl NormalState {
-    fn start_boost(
-        commands: &mut Commands,
-        entity: Entity,
-        player: &Player,
-        facing: &SideScrollDirection,
-        target_speed: &Vec3,
-    ) {
-        // if not moving, boost in the direction that the player is facing
-        let boost_direction = if *target_speed == Vec3::zero() {
-            if facing.is_right() {
-                Vec3::unit_x()
-            } else {
-                -Vec3::unit_x()
-            }
-        } else {
-            target_speed.normalize()
-        };
-
-        // change state and specify velocity of the boost
-        commands.insert_one(
-            entity,
-            BoostState::new(
-                boost_direction * player.stats.boost_speed,
-                player.stats.boost_duration,
-            ),
-        );
-        commands.remove_one::<Self>(entity);
-        println!("Started boost state");
-    }
-}
-
-#[derive(Debug)]
-pub struct BoostState {
-    pub boost_velocity: Vec3,
-    pub boost_timer: Timer,
-}
-
-impl BoostState {
-    pub fn new(boost_velocity: Vec3, boost_duration: f32) -> Self {
-        BoostState {
-            boost_velocity,
-            boost_timer: Timer::from_seconds(boost_duration, false),
-        }
-    }
-
-    pub fn end_boost(commands: &mut Commands, player: &mut Player, entity: Entity) {
-        println!("Finished boost, starting cooldown timer");
-        commands.insert_one(
-            entity,
-            BoostCooldown(Timer::from_seconds(player.stats.boost_cooldown, false)),
-        );
-        commands.insert_one(entity, NormalState);
-        commands.remove_one::<Self>(entity);
-    }
-}
-
-#[derive(Debug)]
-pub struct BoostCooldown(Timer);
-
-#[derive(Debug)]
-struct PlayerStats {
-    boost_speed: f32,
-    boost_duration: f32,
-    boost_cooldown: f32,
-    speed: f32,
-    acceleration: f32,
-    traction: f32,
-    stop_threshold: f32,
-}
-
-#[derive(Debug)]
-pub struct Player {
-    stats: PlayerStats,
-}
-
-pub struct Sink {
-    weight: f32,
-}
 
 pub fn init_player(
     mut commands: Commands,
@@ -127,12 +24,12 @@ pub fn init_player(
         })
         .with(Player {
             stats: PlayerStats {
-                boost_speed: 1250.0,
+                boost_speed: 1500.0,
                 boost_duration: 0.1,
-                boost_cooldown: 0.1,
+                boost_cooldown: 0.2,
                 speed: 400.0,
                 acceleration: 1.0,
-                traction: 1.0,
+                traction: 0.05,
                 stop_threshold: 0.1,
             },
         })
@@ -143,7 +40,7 @@ pub fn init_player(
             width: PLAYER_WIDTH,
             height: PLAYER_HEIGHT,
         })
-        .with(NormalState);
+        .with(state::NormalState);
 }
 
 // TODO: Change to use specific player command events
@@ -152,7 +49,7 @@ pub fn normal_player_movement_system(
     player: &Player,
     mut velocity: Mut<Velocity>,
     mut facing: Mut<SideScrollDirection>,
-    _state: &NormalState,
+    _state: &state::NormalState,
 ) {
     let mut target_speed = Vec3::zero();
 
@@ -192,7 +89,9 @@ pub fn normal_player_movement_system(
 pub fn start_boost_system(
     mut commands: Commands,
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<Without<BoostCooldown, (&NormalState, &Player, &SideScrollDirection, Entity)>>,
+    mut query: Query<
+        Without<state::BoostCooldown, (&state::NormalState, &Player, &SideScrollDirection, Entity)>,
+    >,
 ) {
     for (_state, player, facing, entity) in &mut query.iter() {
         let mut target_speed = Vec3::zero();
@@ -214,7 +113,7 @@ pub fn start_boost_system(
         }
 
         if keyboard_input.pressed(KeyCode::Space) {
-            NormalState::start_boost(&mut commands, entity, player, &facing, &target_speed);
+            state::start_boost(&mut commands, entity, player, &facing, &target_speed);
         }
     }
 }
@@ -224,7 +123,7 @@ pub fn boost_player_movement_system(
     time: Res<Time>,
     mut player: Mut<Player>,
     mut velocity: Mut<Velocity>,
-    mut boost_state: Mut<BoostState>,
+    mut boost_state: Mut<state::BoostState>,
     entity: Entity,
 ) {
     velocity.0 = boost_state.boost_velocity;
@@ -232,21 +131,25 @@ pub fn boost_player_movement_system(
     boost_state.boost_timer.tick(time.delta_seconds);
 
     if boost_state.boost_timer.finished {
-        BoostState::end_boost(&mut commands, &mut player, entity);
+        state::end_boost(&mut commands, &mut player, entity);
     }
 }
 
 pub fn boost_cooldown_system(
     mut commands: Commands,
     time: Res<Time>,
-    mut boost_cooldown: Mut<BoostCooldown>,
+    keyboard_input: Res<Input<KeyCode>>,
+    mut boost_cooldown: Mut<state::BoostCooldown>,
     entity: Entity,
 ) {
-    boost_cooldown.0.tick(time.delta_seconds);
+    boost_cooldown.timer.tick(time.delta_seconds);
 
-    if boost_cooldown.0.finished {
+    boost_cooldown.did_release =
+        boost_cooldown.did_release || !keyboard_input.pressed(KeyCode::Space);
+
+    if boost_cooldown.timer.finished && boost_cooldown.did_release {
         println!("Boost cooldown finished");
-        commands.remove_one::<BoostCooldown>(entity);
+        commands.remove_one::<state::BoostCooldown>(entity);
     }
 }
 

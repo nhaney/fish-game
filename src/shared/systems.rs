@@ -1,26 +1,5 @@
-/*
-Components and systems shared by more than one part of the game
-*/
+use super::components::{SideScrollDirection, Velocity};
 use bevy::prelude::*;
-
-pub struct Velocity(pub Vec3);
-
-pub struct SideScrollDirection(pub bool);
-
-impl SideScrollDirection {
-    pub fn is_right(&self) -> bool {
-        self.0
-    }
-
-    pub fn is_left(&self) -> bool {
-        !self.0
-    }
-}
-
-pub struct Collider {
-    pub width: f32,
-    pub height: f32,
-}
 
 pub fn movement_system(time: Res<Time>, velocity: &Velocity, mut transform: Mut<Transform>) {
     let translation = transform.translation_mut();
@@ -35,4 +14,8 @@ pub fn flip_sprite_system(direction: &SideScrollDirection, mut transform: Mut<Tr
     } else {
         transform.set_rotation(Quat::from_rotation_y(0.0));
     }
+}
+
+pub fn initialize_game(mut commands: Commands) {
+    commands.spawn(Camera2dComponents::default());
 }
