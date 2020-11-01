@@ -20,3 +20,10 @@ fn main() {
         .add_plugin(player::PlayerPlugin)
         .run();
 }
+
+struct GameState {
+    paused: bool,
+    game_over: bool,
+    game_timer: Timer,
+    score: f32,
+}
