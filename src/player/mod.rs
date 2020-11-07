@@ -50,7 +50,7 @@ pub fn init_player(
         })
         .with(Velocity(Vec3::zero()))
         .with(SideScrollDirection(true))
-        .with(components::Sink { weight: 30.0 })
+        .with(components::Sink { weight: 50.0 })
         .with(Collider {
             width: PLAYER_WIDTH,
             height: PLAYER_HEIGHT,
