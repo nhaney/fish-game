@@ -15,7 +15,7 @@ fn main() {
             ..Default::default()
         })
         .add_resource(bevy::render::pass::ClearColor(Color::rgb_u8(230, 202, 173)))
-        .add_default_plugins()
+        .add_plugins(DefaultPlugins)
         .add_plugin(shared::SharedPlugin)
         .add_plugin(player::PlayerPlugin)
         .run();

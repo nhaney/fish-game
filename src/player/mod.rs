@@ -1,18 +1,29 @@
 use crate::shared::components::{Collider, SideScrollDirection, Velocity};
 use bevy::prelude::*;
+use std::collections::HashSet;
 
-mod components;
+mod attributes;
+mod collision;
+mod movement;
+mod render;
 mod states;
-mod systems;
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(init_player.system())
-            .add_system(systems::sink_system.system())
-            .add_system(systems::player_bounds_system.system())
-            .add_plugin(states::PlayerStatePlugin)
+            // systems that handle input/movement
+            .add_system(states::swim_movement_system.system())
+            .add_system(states::boost_movement_system.system())
+            .add_system(states::boost_cooldown_system.system())
+            .add_system(movement::sink_system.system())
+            // systems that handle collision
+            .add_system(collision::player_bounds_system.system())
+            // systems that handle presentation
+            .init_resource::<render::PlayerSpriteHandles>()
+            .add_startup_system(render::start_atlas_load.system())
+            .add_system(render::load_player_atlas.system())
             .run();
     }
 }
@@ -20,25 +31,10 @@ impl Plugin for PlayerPlugin {
 const PLAYER_WIDTH: f32 = 32.0;
 const PLAYER_HEIGHT: f32 = 32.0;
 
-pub fn init_player(
-    mut commands: Commands,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    asset_server: Res<AssetServer>,
-) {
-    commands
-        .spawn(SpriteComponents {
-            material: materials.add(
-                asset_server
-                    .load("assets/sprites/player/fish1.png")
-                    .unwrap()
-                    .into(),
-            ),
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-            sprite: Sprite::new(Vec2::new(PLAYER_WIDTH, PLAYER_HEIGHT)),
-            ..Default::default()
-        })
-        .with(components::Player {
-            stats: components::PlayerStats {
+fn init_player(mut commands: Commands) {
+    commands.spawn((
+        attributes::Player {
+            stats: attributes::PlayerStats {
                 boost_speed: 1500.0,
                 boost_duration: 0.1,
                 boost_cooldown: 0.2,
@@ -47,13 +43,17 @@ pub fn init_player(
                 traction: 0.8,
                 stop_threshold: 0.1,
             },
-        })
-        .with(Velocity(Vec3::zero()))
-        .with(SideScrollDirection(true))
-        .with(components::Sink { weight: 50.0 })
-        .with(Collider {
+        },
+        attributes::Sink { weight: 10.0 },
+        states::PlayerState {
+            current_state: states::PlayerStates::Idle,
+            blocked_transitions: HashSet::new(),
+        },
+        Velocity(Vec3::zero()),
+        SideScrollDirection(true),
+        Collider {
             width: PLAYER_WIDTH,
             height: PLAYER_HEIGHT,
-        })
-        .with(states::idle::IdleState);
+        },
+    ));
 }

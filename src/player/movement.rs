@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::components::{Player, Sink};
+use super::attributes::{Player, Sink};
 use crate::shared::{
     arena::Arena,
     components::{Collider, SideScrollDirection, Velocity},
@@ -11,7 +11,7 @@ Reads keyboard input and adjusts players velocity based on it. Returns
 the target speed of the player.
 */
 // TODO: Change to use specific player command events
-pub fn move_player_from_input(
+pub(super) fn move_player_from_input(
     keyboard_input: &Input<KeyCode>,
     player: &Player,
     mut velocity: &mut Velocity,
@@ -55,40 +55,8 @@ pub fn move_player_from_input(
 }
 
 /// sinks the player based on their weight
-pub fn sink_system(mut velocity: Mut<Velocity>, sink: &Sink) {
-    *velocity.0.y_mut() -= sink.weight;
-}
-
-/// Keeps player in bounds of arena
-pub fn player_bounds_system(
-    arena: Res<Arena>,
-    _player: &Player,
-    mut transform: Mut<Transform>,
-    collider: &Collider,
-) {
-    let mut new_pos = transform.translation().clone();
-
-    let arena_half_width = arena.width / 2.0;
-    let arena_half_height = arena.height / 2.0;
-
-    let player_half_width = collider.width / 2.0;
-    let player_half_height = collider.height / 2.0;
-
-    if new_pos.x() - player_half_width < -arena_half_width {
-        *new_pos.x_mut() = -arena_half_width + player_half_width;
+pub(super) fn sink_system(mut query: Query<(&mut Velocity, &Sink)>) {
+    for (mut velocity, sink) in query.iter_mut() {
+        *velocity.0.y_mut() -= sink.weight;
     }
-
-    if new_pos.x() + player_half_width > arena_half_width {
-        *new_pos.x_mut() = arena_half_width - player_half_width;
-    }
-
-    if new_pos.y() - player_half_height < -arena_half_height {
-        *new_pos.y_mut() = -arena_half_height + player_half_height;
-    }
-
-    if new_pos.y() + player_half_height > (arena_half_height + arena.offset) {
-        *new_pos.y_mut() = (arena_half_height + arena.offset) - player_half_height;
-    }
-
-    transform.set_translation(new_pos);
 }

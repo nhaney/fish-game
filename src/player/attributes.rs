@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub struct PlayerStats {
+pub(super) struct PlayerStats {
     pub boost_speed: f32,
     pub boost_duration: f32,
     pub boost_cooldown: f32,
@@ -10,10 +10,11 @@ pub struct PlayerStats {
 }
 
 #[derive(Debug)]
-pub struct Player {
+pub(super) struct Player {
     pub stats: PlayerStats,
 }
 
-pub struct Sink {
+// TODO: Could this component be shared? It might be cool for other things to sink in the future
+pub(super) struct Sink {
     pub weight: f32,
 }
