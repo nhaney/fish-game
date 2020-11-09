@@ -4,7 +4,10 @@ use std::collections::HashMap;
 use super::attributes::Player;
 use super::states::{PlayerState, PlayerStates};
 
-/// Represents one frame of animation
+/**
+Represents one frame of animation. The atlas index references the TextureAtlas
+handle on the entity.
+*/
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct AnimationFrame {
     atlas_index: usize,
@@ -108,58 +111,87 @@ pub(super) fn load_player_atlas(
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut textures: ResMut<Assets<Texture>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     query: Query<Without<TextureAtlasSprite, (&Player, &PlayerState, Entity)>>,
 ) {
     if player_sprite_handles.atlas_loaded {
         return;
     }
 
-    for (_, player_state, entity) in query.iter() {
-        let mut texture_atlas_builder = TextureAtlasBuilder::default();
+    let mut texture_atlas_builder = TextureAtlasBuilder::default();
 
-        if let LoadState::Loaded = asset_server
-            .get_group_load_state(player_sprite_handles.handles.iter().map(|handle| handle.id))
-        {
-            println!("Loaded player sprite textures.");
+    if let LoadState::Loaded = asset_server
+        .get_group_load_state(player_sprite_handles.handles.iter().map(|handle| handle.id))
+    {
+        println!("Loaded player sprite textures.");
 
-            for handle in player_sprite_handles.handles.iter() {
-                let texture = textures.get(handle).unwrap();
-                texture_atlas_builder.add_texture(handle.clone_weak().typed::<Texture>(), &texture);
-            }
+        for handle in player_sprite_handles.handles.iter() {
+            let texture = textures.get(handle).unwrap();
+            texture_atlas_builder.add_texture(handle.clone_weak().typed::<Texture>(), &texture);
+        }
 
-            let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
+        let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
 
-            let player_animations = create_player_animations(&texture_atlas, asset_server);
-            let atlas_handle = texture_atlases.add(texture_atlas);
+        let player_animations = create_player_animations(&texture_atlas, asset_server);
 
-            // adds the sprite sheet component and animation state component to the player entities
-            let player_animation = player_animations.get(&player_state.current_state).unwrap();
+        println!("Player state animations map: {:?}", player_animations);
+
+        let texture_atlas_texture = texture_atlas.texture.clone();
+
+        let atlas_handle = texture_atlases.add(texture_atlas);
+
+        // adds the sprite sheet component and animation state component to the player entities
+        for (_, player_state, entity) in query.iter() {
+            let player_animation = player_animations.get(&PlayerStates::Swim).unwrap();
             let first_animation_frame = player_animation.frames[0];
 
-            let initial_animation_state = AnimationState {
-                animation: player_animation.clone(),
-                timer: Timer::from_seconds(first_animation_frame.time, false),
-                frame_index: 0,
-                speed_multiplier: 1.0,
-            };
-
-            println!("Adding sprite sheet component");
+            println!("Adding sprite sheet components to entity: {:?}", entity);
             commands.insert(
                 entity,
-                // TODO: Replace this with a position component
-                (
-                    SpriteSheetComponents {
-                        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-                        sprite: TextureAtlasSprite::new(first_animation_frame.atlas_index as u32),
-                        texture_atlas: atlas_handle.clone(),
-                        ..Default::default()
-                    },
-                    initial_animation_state,
-                ),
+                SpriteSheetComponents {
+                    transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+                    sprite: TextureAtlasSprite::new(first_animation_frame.atlas_index as u32),
+                    texture_atlas: atlas_handle.clone(),
+                    ..Default::default()
+                },
+            );
+            commands.insert_one(
+                entity,
+                AnimationState {
+                    animation: player_animation.clone(),
+                    timer: Timer::from_seconds(first_animation_frame.time, false),
+                    frame_index: 0,
+                    speed_multiplier: 1.0,
+                },
             );
         }
-    }
 
-    commands.insert_resource(player_animations);
-    player_sprite_handles.atlas_loaded = true;
+        commands.spawn(SpriteComponents {
+            material: materials.add(texture_atlas_texture.into()),
+            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+            ..Default::default()
+        });
+
+        commands.insert_resource(player_animations.clone());
+        player_sprite_handles.atlas_loaded = true;
+    }
+}
+
+pub(super) fn animation_system(
+    time: Res<Time>,
+    mut query: Query<(&mut AnimationState, &mut TextureAtlasSprite)>,
+) {
+    for (mut animation_state, mut texture_atlas_sprite) in query.iter_mut() {
+        animation_state.timer.tick(time.delta_seconds);
+
+        if animation_state.timer.finished {
+            animation_state.frame_index =
+                (animation_state.frame_index + 1) % animation_state.animation.frames.len() as u32;
+            animation_state.timer = Timer::from_seconds(
+                animation_state.animation.frames[animation_state.frame_index as usize].time,
+                false,
+            );
+            texture_atlas_sprite.index = animation_state.frame_index;
+        }
+    }
 }

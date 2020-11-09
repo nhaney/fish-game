@@ -24,6 +24,7 @@ impl Plugin for PlayerPlugin {
             .init_resource::<render::PlayerSpriteHandles>()
             .add_startup_system(render::start_atlas_load.system())
             .add_system(render::load_player_atlas.system())
+            .add_system(render::animation_system.system())
             .run();
     }
 }

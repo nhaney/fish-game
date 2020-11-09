@@ -1,4 +1,5 @@
 use super::components::{SideScrollDirection, Velocity};
+
 use bevy::prelude::*;
 
 pub fn movement_system(time: Res<Time>, mut query: Query<(&Velocity, &mut Transform)>) {
