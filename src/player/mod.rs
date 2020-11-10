@@ -1,4 +1,7 @@
-use crate::shared::components::{Collider, SideScrollDirection, Velocity};
+use crate::shared::{
+    collision::Collider,
+    movement::{SideScrollDirection, Velocity},
+};
 use bevy::prelude::*;
 use std::collections::HashSet;
 
@@ -22,9 +25,10 @@ impl Plugin for PlayerPlugin {
             .add_system(collision::player_bounds_system.system())
             // systems that handle presentation
             .init_resource::<render::PlayerSpriteHandles>()
+            .init_resource::<render::PlayerStateAnimations>()
             .add_startup_system(render::start_atlas_load.system())
             .add_system(render::load_player_atlas.system())
-            .add_system(render::animation_system.system())
+            .add_system(render::player_state_animation_change_system.system())
             .run();
     }
 }

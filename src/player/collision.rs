@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::attributes::Player;
-use crate::shared::{arena::Arena, components::Collider};
+use crate::shared::{arena::Arena, collision::Collider};
 
 /// Keeps player in bounds of arena
 pub(super) fn player_bounds_system(
@@ -9,7 +9,7 @@ pub(super) fn player_bounds_system(
     mut query: Query<(&Player, &Collider, &mut Transform)>,
 ) {
     for (_, collider, mut transform) in query.iter_mut() {
-        let mut new_pos = &mut transform.translation;
+        let new_pos = &mut transform.translation;
 
         let arena_half_width = arena.width / 2.0;
         let arena_half_height = arena.height / 2.0;

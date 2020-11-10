@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use super::attributes::{Player, PlayerStats};
 use super::movement::move_player_from_input;
-use crate::shared::components::{SideScrollDirection, Velocity};
+use crate::shared::movement::{SideScrollDirection, Velocity};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub(super) enum PlayerStates {

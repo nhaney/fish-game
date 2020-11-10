@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-const DEFAULT_ARENA_WIDTH: f32 = 800.0;
-const DEFAULT_ARENA_HEIGHT: f32 = 600.0;
-const DEFAULT_ARENA_OFFSET: f32 = -50.0;
+pub const DEFAULT_ARENA_WIDTH: f32 = 800.0;
+pub const DEFAULT_ARENA_HEIGHT: f32 = 600.0;
+pub const DEFAULT_ARENA_OFFSET: f32 = -50.0;
 
 // TODO: Make this API cleaner
 pub struct Arena {

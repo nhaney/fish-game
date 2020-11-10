@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 
 use super::attributes::{Player, Sink};
-use crate::shared::{
-    arena::Arena,
-    components::{Collider, SideScrollDirection, Velocity},
-};
+use crate::shared::movement::{SideScrollDirection, Velocity};
 
 /**
 Reads keyboard input and adjusts players velocity based on it. Returns
