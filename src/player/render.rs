@@ -128,7 +128,6 @@ pub(super) fn load_player_atlas(
             commands.insert(
                 entity,
                 SpriteSheetComponents {
-                    transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
                     sprite: TextureAtlasSprite::new(first_animation_frame.atlas_index as u32),
                     texture_atlas: atlas_handle.clone(),
                     ..Default::default()

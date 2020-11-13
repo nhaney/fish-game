@@ -1,6 +1,6 @@
 use crate::shared::{
     collision::Collider,
-    movement::{SideScrollDirection, Velocity},
+    movement::{GameTransform, SideScrollDirection, Velocity},
 };
 use bevy::prelude::*;
 use std::collections::HashSet;
@@ -15,6 +15,7 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut AppBuilder) {
+        println!("Building player plugin...");
         app.add_startup_system(init_player.system())
             // systems that handle input/movement
             .add_system(states::swim_movement_system.system())
@@ -28,13 +29,12 @@ impl Plugin for PlayerPlugin {
             .init_resource::<render::PlayerStateAnimations>()
             .add_startup_system(render::start_atlas_load.system())
             .add_system(render::load_player_atlas.system())
-            .add_system(render::player_state_animation_change_system.system())
-            .run();
+            .add_system(render::player_state_animation_change_system.system());
     }
 }
 
-const PLAYER_WIDTH: f32 = 32.0;
-const PLAYER_HEIGHT: f32 = 32.0;
+const PLAYER_WIDTH: f32 = 16.0;
+const PLAYER_HEIGHT: f32 = 16.0;
 
 fn init_player(mut commands: Commands) {
     commands.spawn((
@@ -59,6 +59,10 @@ fn init_player(mut commands: Commands) {
         Collider {
             width: PLAYER_WIDTH,
             height: PLAYER_HEIGHT,
+        },
+        GameTransform {
+            cur_transform: Transform::default(),
+            prev_transform: Transform::default(),
         },
     ));
 }

@@ -28,3 +28,10 @@
 - [ ]  Improved graphics
 - [ ]  New obstacles (Birds, sharks, etc)
 - [ ]  Power-ups (Invincibility, life vest)
+
+
+## Short term TODO List:
+* Platform independent deterministic random seeds
+* Window size scaling, keep game to 640x360
+* Fixed time step
+* Game State Resource - score, timer, etc

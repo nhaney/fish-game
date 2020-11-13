@@ -8,8 +8,8 @@ fn main() {
     App::build()
         .add_resource(WindowDescriptor {
             title: "Stay Off the Line!".to_string(),
-            width: 800,
-            height: 600,
+            width: 640,
+            height: 360,
             vsync: false,
             resizable: false,
             mode: WindowMode::Windowed,

@@ -8,3 +8,5 @@ edition = "2018"
 
 [dependencies]
 bevy = "0.3"
+rand = { version = "0.7", default-features = false }
+rand_chacha = "0.2.2"

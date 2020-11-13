@@ -1,15 +1,15 @@
 use bevy::prelude::*;
 
 use super::attributes::Player;
-use crate::shared::{arena::Arena, collision::Collider};
+use crate::shared::{arena::Arena, collision::Collider, movement::GameTransform};
 
 /// Keeps player in bounds of arena
 pub(super) fn player_bounds_system(
     arena: Res<Arena>,
-    mut query: Query<(&Player, &Collider, &mut Transform)>,
+    mut query: Query<(&Player, &Collider, &mut GameTransform)>,
 ) {
     for (_, collider, mut transform) in query.iter_mut() {
-        let new_pos = &mut transform.translation;
+        let new_pos = &mut transform.cur_transform.translation;
 
         let arena_half_width = arena.width / 2.0;
         let arena_half_height = arena.height / 2.0;
@@ -32,7 +32,5 @@ pub(super) fn player_bounds_system(
         if new_pos.y() + player_half_height > (arena_half_height + arena.offset) {
             *new_pos.y_mut() = (arena_half_height + arena.offset) - player_half_height;
         }
-
-        // transform.translation = *new_pos;
     }
 }
