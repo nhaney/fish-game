@@ -1,3 +1,5 @@
+use bevy::prelude::*;
+
 #[derive(Debug)]
 pub(super) struct PlayerStats {
     pub boost_speed: f32,
@@ -17,4 +19,22 @@ pub(super) struct Player {
 // TODO: Could this component be shared? It might be cool for other things to sink in the future
 pub(super) struct Sink {
     pub weight: f32,
+}
+
+pub(super) struct HungerCountdown {
+    time_left: f32,
+}
+
+pub(super) fn hunger_countdown_system(
+    time: Res<Time>,
+    mut query: Query<(&mut HungerCountdown, Entity)>,
+) {
+    for (mut hunger_countdown, entity) in query.iter_mut() {
+        hunger_countdown.time_left -= time.delta_seconds;
+
+        if hunger_countdown.time_left < 0.0 {
+            // emit starved event for entity
+            ()
+        }
+    }
 }

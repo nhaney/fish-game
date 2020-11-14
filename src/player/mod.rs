@@ -18,23 +18,26 @@ impl Plugin for PlayerPlugin {
         println!("Building player plugin...");
         app.add_startup_system(init_player.system())
             // systems that handle input/movement
-            .add_system(states::swim_movement_system.system())
-            .add_system(states::boost_movement_system.system())
-            .add_system(states::boost_cooldown_system.system())
-            .add_system(movement::sink_system.system())
+            .add_system_to_stage(stage::PRE_UPDATE, states::swim_movement_system.system())
+            .add_system_to_stage(stage::PRE_UPDATE, states::boost_movement_system.system())
+            .add_system_to_stage(stage::PRE_UPDATE, states::boost_cooldown_system.system())
+            .add_system_to_stage(stage::PRE_UPDATE, movement::sink_system.system())
             // systems that handle collision
-            .add_system(collision::player_bounds_system.system())
+            .add_system_to_stage(stage::POST_UPDATE, collision::player_bounds_system.system())
             // systems that handle presentation
             .init_resource::<render::PlayerSpriteHandles>()
             .init_resource::<render::PlayerStateAnimations>()
             .add_startup_system(render::start_atlas_load.system())
-            .add_system(render::load_player_atlas.system())
-            .add_system(render::player_state_animation_change_system.system());
+            .add_system_to_stage(stage::LAST, render::load_player_atlas.system())
+            .add_system_to_stage(
+                stage::LAST,
+                render::player_state_animation_change_system.system(),
+            );
     }
 }
 
-const PLAYER_WIDTH: f32 = 16.0;
-const PLAYER_HEIGHT: f32 = 16.0;
+const PLAYER_WIDTH: f32 = 32.0;
+const PLAYER_HEIGHT: f32 = 32.0;
 
 fn init_player(mut commands: Commands) {
     commands.spawn((
