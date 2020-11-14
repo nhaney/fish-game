@@ -13,11 +13,11 @@ struct GamePaused;
 const MAX_DIFFICULTY: u8 = 4;
 
 pub struct Difficulty {
-    multiplier: u8,
-    timer: Timer,
+    pub multiplier: u8,
+    pub(super) timer: Timer,
 }
 
-pub(super) fn difficulty_scaling_system(time: Res<Time>, difficulty: ResMut<Difficulty>) {
+pub(super) fn difficulty_scaling_system(time: Res<Time>, mut difficulty: ResMut<Difficulty>) {
     difficulty.timer.tick(time.delta_seconds);
 
     if difficulty.timer.finished {
