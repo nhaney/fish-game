@@ -20,7 +20,11 @@ impl Plugin for SharedPlugin {
             .add_system_to_stage_front(stage::LAST, animation::flip_sprite_system.system())
             .add_system_to_stage_front(
                 stage::LAST,
-                render::scale_game_transform_to_screen_size.system(),
+                render::scale_children_game_transforms_to_screen_size.system(),
+            )
+            .add_system_to_stage_front(
+                stage::LAST,
+                render::scale_parent_game_transforms_to_screen_size.system(),
             )
             .init_resource::<rng::GameRng>()
             .add_resource(game::Difficulty {

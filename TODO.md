@@ -30,6 +30,8 @@
 - [ ]  Power-ups (Invincibility, life vest)
 
 
-## Short term TODO List:
-* Fixed time step
-* Game State Resource - score, timer, etc
+## Goal List 11/15/20
+* Worms and hooks attached to parent boat, line drawn separately
+* Collision detection for hooks and worms
+BREAK
+
