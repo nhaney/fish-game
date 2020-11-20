@@ -1,11 +1,5 @@
 use bevy::prelude::*;
 
-#[derive(Debug, PartialEq, Clone, Copy, Properties)]
-pub struct GameTransform {
-    pub cur_transform: Transform,
-    pub prev_transform: Transform,
-}
-
 pub struct Velocity(pub Vec3);
 
 pub struct SideScrollDirection(pub bool);
@@ -20,10 +14,18 @@ impl SideScrollDirection {
     }
 }
 
-pub fn movement_system(time: Res<Time>, mut query: Query<(&Velocity, &mut GameTransform)>) {
+pub fn movement_system(time: Res<Time>, mut query: Query<(&Velocity, &mut Transform)>) {
     for (velocity, mut transform) in query.iter_mut() {
-        transform.prev_transform = transform.cur_transform;
+        transform.translation += time.delta_seconds * velocity.0;
+    }
+}
 
-        transform.cur_transform.translation += time.delta_seconds * velocity.0;
+pub fn flip_transform_system(mut query: Query<(&SideScrollDirection, &mut Transform)>) {
+    for (direction, mut transform) in query.iter_mut() {
+        if direction.is_left() {
+            transform.rotation = Quat::from_rotation_y(std::f32::consts::PI);
+        } else {
+            transform.rotation = Quat::from_rotation_y(0.0);
+        }
     }
 }

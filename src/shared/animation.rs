@@ -58,7 +58,7 @@ pub(super) fn animation_system(
     }
 }
 
-pub fn flip_sprite_system(mut query: Query<(&SideScrollDirection, &mut Transform)>) {
+pub fn flip_transform_system(mut query: Query<(&SideScrollDirection, &mut Transform)>) {
     for (direction, mut transform) in query.iter_mut() {
         if direction.is_left() {
             transform.rotation = Quat::from_rotation_y(std::f32::consts::PI);

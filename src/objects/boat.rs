@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 use crate::shared::{
     arena::Arena,
     collision::Collider,
     game::Difficulty,
-    movement::{GameTransform, SideScrollDirection, Velocity},
+    movement::{SideScrollDirection, Velocity},
     rng::GameRng,
 };
 
@@ -99,11 +99,8 @@ pub(super) fn boat_spawner_system(
     boat_spawner.spawn_timer.tick(time.delta_seconds);
 
     if boat_spawner.spawn_timer.finished {
-        println!("Spawning a boat!");
         for _ in 0..rng.rng.gen_range(1, difficulty.multiplier + 1) {
-            println!("Generating stats...");
             let stats = boat_stats_factory(difficulty.multiplier, &mut rng.rng);
-            println!("Generating a boat with stats: {:?}", stats);
             spawn_boat(
                 stats,
                 &mut commands,
@@ -158,10 +155,6 @@ fn spawn_boat(
             },
             SideScrollDirection(facing_right),
             Boat,
-            GameTransform {
-                cur_transform: Transform::from_translation(boat_start_pos),
-                prev_transform: Transform::default(),
-            },
         ))
         .with_bundle(SpriteComponents {
             material: boat_material.clone(),
@@ -169,12 +162,7 @@ fn spawn_boat(
                 size: Vec2::new(stats.width, stats.height),
                 ..Default::default()
             },
-            transform: Transform::from_translation(Vec3::new(
-                // TODO: Fix this from flashing when spawned so this can be removed
-                9999.0,
-                boat_start_pos.y(),
-                0.0,
-            )),
+            transform: Transform::from_translation(boat_start_pos),
             ..Default::default()
         })
         .with_children(|parent| {
@@ -227,10 +215,6 @@ fn spawn_lines(
         parent
             .spawn((
                 Hook,
-                GameTransform {
-                    cur_transform: Transform::from_translation(end_point),
-                    prev_transform: Transform::default(),
-                },
                 Collider {
                     width: HOOK_SIZE,
                     height: HOOK_SIZE,
@@ -242,6 +226,7 @@ fn spawn_lines(
                     ..Default::default()
                 },
                 material: hook_material.clone(),
+                transform: Transform::from_translation(end_point),
                 ..Default::default()
             });
 
@@ -255,10 +240,6 @@ fn spawn_lines(
             parent
                 .spawn((
                     Worm,
-                    GameTransform {
-                        cur_transform: Transform::from_translation(worm_pos),
-                        prev_transform: Transform::default(),
-                    },
                     Collider {
                         width: WORM_SIZE,
                         height: WORM_SIZE,
@@ -270,6 +251,7 @@ fn spawn_lines(
                         ..Default::default()
                     },
                     material: worm_material.clone(),
+                    transform: Transform::from_translation(worm_pos),
                     ..Default::default()
                 });
         }
@@ -299,16 +281,18 @@ fn spawn_lines(
 pub(super) fn despawn_boat_system(
     mut commands: Commands,
     arena: Res<Arena>,
-    boat_query: Query<(&Boat, &GameTransform, Entity)>,
-    hook_query: Query<(&Hook, &GameTransform, &Parent)>,
+    boat_query: Query<(&Boat, &Collider, &Transform, Entity)>,
+    hook_query: Query<(&Hook, &Collider, &GlobalTransform, &Parent)>,
 ) {
-    let mut boats_off_screen: HashSet<Entity> = HashSet::new();
+    let mut boats_off_screen: Vec<Entity> = Vec::new();
 
-    for (_, transform, entity) in boat_query.iter() {
-        let boat_x = transform.cur_transform.translation.x();
+    for (_, collider, transform, entity) in boat_query.iter() {
+        let boat_x = transform.translation.x();
 
-        if boat_x < -(arena.width / 2.0) && boat_x > (arena.width / 2.0) {
-            boats_off_screen.insert(entity);
+        if (boat_x + collider.width) < -(arena.width / 2.0)
+            || (boat_x - collider.width) > (arena.width / 2.0)
+        {
+            boats_off_screen.push(entity);
         }
     }
 
@@ -316,11 +300,31 @@ pub(super) fn despawn_boat_system(
         return;
     }
 
-    for (_, transform, parent) in hook_query.iter() {
+    let mut off_screen_hooks: HashMap<Entity, usize> = HashMap::new();
+    let mut total_hooks: HashMap<Entity, usize> = HashMap::new();
+
+    for (_, collider, transform, parent) in hook_query.iter() {
         if !boats_off_screen.contains(parent) {
             continue;
         }
 
-        let hook_x = transform.cur_transform.translation.x();
+        let hook_x = transform.translation.x();
+
+        if (hook_x + collider.width) < -(arena.width / 2.0)
+            || (hook_x - collider.width) > (arena.width / 2.0)
+        {
+            let off_screen_counter = off_screen_hooks.entry(parent.0).or_insert(0);
+            *off_screen_counter += 1;
+        }
+
+        let total_counter = total_hooks.entry(parent.0).or_insert(0);
+        *total_counter += 1
+    }
+
+    for (boat, count) in off_screen_hooks.into_iter() {
+        let total = *total_hooks.get(&boat).unwrap();
+        if count == total {
+            commands.despawn_recursive(boat);
+        }
     }
 }

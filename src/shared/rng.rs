@@ -19,15 +19,3 @@ impl Default for GameRng {
         }
     }
 }
-
-// impl GameRng {
-//     fn new() -> Self {
-//         let mut seed: <ChaCha8Rng as SeedableRng>::Seed = Default::default();
-//         thread_rng().fill(&mut seed);
-//
-//         GameRng {
-//             rng: ChaCha8Rng::from_seed(seed),
-//             seed,
-//         }
-//     }
-// }

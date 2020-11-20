@@ -159,10 +159,10 @@ pub(super) fn player_state_animation_change_system(
         let cur_player_state = &player_state.current_state;
         if let Some(prev_player_state) = last_entity_states.get(&entity) {
             if cur_player_state != prev_player_state {
-                println!(
-                    "State change detected in animation system from {:?} to {:?}",
-                    prev_player_state, cur_player_state
-                );
+                // println!(
+                //     "State change detected in animation system from {:?} to {:?}",
+                //     prev_player_state, cur_player_state
+                // );
 
                 let next_animation = player_state_animations.map.get(&cur_player_state).unwrap();
 

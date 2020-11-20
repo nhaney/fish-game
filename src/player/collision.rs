@@ -1,15 +1,21 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::collide_aabb::collide};
 
-use super::attributes::Player;
-use crate::shared::{arena::Arena, collision::Collider, movement::GameTransform};
+use super::{
+    attributes::Player,
+    events::{PlayerAte, PlayerHooked},
+};
+use crate::{
+    objects::boat::{Hook, Worm},
+    shared::{arena::Arena, collision::Collider},
+};
 
 /// Keeps player in bounds of arena
 pub(super) fn player_bounds_system(
     arena: Res<Arena>,
-    mut query: Query<(&Player, &Collider, &mut GameTransform)>,
+    mut query: Query<(&Player, &Collider, &mut Transform)>,
 ) {
     for (_, collider, mut transform) in query.iter_mut() {
-        let new_pos = &mut transform.cur_transform.translation;
+        let new_pos = &mut transform.translation;
 
         let arena_half_width = arena.width / 2.0;
         let arena_half_height = arena.height / 2.0;
@@ -32,6 +38,53 @@ pub(super) fn player_bounds_system(
         // allow floating on the top
         if new_pos.y() > (arena_half_height + arena.offset) {
             *new_pos.y_mut() = arena_half_height + arena.offset;
+        }
+    }
+}
+
+pub(super) fn player_hook_collision_system(
+    mut player_hooked_events: ResMut<Events<PlayerHooked>>,
+    player_query: Query<(&Player, &Collider, &Transform, Entity)>,
+    hook_query: Query<(&Hook, &Collider, &GlobalTransform, Entity)>,
+) {
+    for (_, player_collider, player_transform, player_entity) in player_query.iter() {
+        let player_pos = player_transform.translation;
+        let player_size = player_collider.as_vec2();
+        for (_, hook_collider, hook_transform, hook_entity) in hook_query.iter() {
+            let hook_pos = hook_transform.translation;
+            let hook_size = hook_collider.as_vec2();
+            if let Some(collision) = collide(player_pos, player_size, hook_pos, hook_size) {
+                println!("Player collided with a hook!");
+
+                player_hooked_events.send(PlayerHooked {
+                    player_entity,
+                    hook_entity,
+                    collision,
+                })
+            }
+        }
+    }
+}
+
+pub(super) fn player_worm_collision_system(
+    mut player_hooked_events: ResMut<Events<PlayerAte>>,
+    player_query: Query<(&Player, &Collider, &Transform, Entity)>,
+    worm_query: Query<(&Worm, &Collider, &GlobalTransform, Entity)>,
+) {
+    for (_, player_collider, player_transform, player_entity) in player_query.iter() {
+        let player_pos = player_transform.translation;
+        let player_size = player_collider.as_vec2();
+        for (_, worm_collider, worm_transform, worm_entity) in worm_query.iter() {
+            let worm_pos = worm_transform.translation;
+            let worm_size = worm_collider.as_vec2();
+            if let Some(collision) = collide(player_pos, player_size, worm_pos, worm_size) {
+                println!("Player collided with a worm!");
+                player_hooked_events.send(PlayerAte {
+                    player_entity,
+                    worm_entity,
+                    collision,
+                })
+            }
         }
     }
 }
