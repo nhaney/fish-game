@@ -18,7 +18,7 @@
 
 ## Additional features
 
-- [ ]  Deterministic updates
+- [ ]  Fixed updates
 - [ ]  Music
 - [ ]  Customizable controls
 - [ ]  Main menu
@@ -30,8 +30,27 @@
 - [ ]  Power-ups (Invincibility, life vest)
 
 
-## Goal List 11/15/20
-* Worms and hooks attached to parent boat, line drawn separately
-* Collision detection for hooks and worms
-BREAK
-
+## Goal List 11/21/20
+- [x] Boat collision
+- [x] Game state and scoring modeled
+  * Game state fsm?
+- [ ] Event handlers for hook collision
+  * ~~Boat exits~~
+  * Hook reel start
+  * Player state changes
+- [ ] Event handlers for worm collision
+  * ~~Worm despawn~~
+  * Audio?
+- [ ] Worm animation
+- [ ] Boat animation
+- [ ] Player starvation timer
+- [ ] Player boost controller
+- [ ] UI
+  * Score display
+    * Changes color when at highest score
+  * Pause/Start button
+  * Game over messages
+  * Player starve timer/boosts
+- [ ] Restart game
+- [ ] Record high scores
+- [ ] WASM target

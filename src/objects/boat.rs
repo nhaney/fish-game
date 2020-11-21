@@ -2,10 +2,11 @@ use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
 use std::collections::HashMap;
 
+use crate::player::events::PlayerAte;
 use crate::shared::{
     arena::Arena,
     collision::Collider,
-    game::Difficulty,
+    game::{Difficulty, GameOver, GameState, GameStates},
     movement::{SideScrollDirection, Velocity},
     rng::GameRng,
 };
@@ -90,12 +91,17 @@ pub(super) fn boat_spawner_system(
     mut commands: Commands,
     time: Res<Time>,
     arena: Res<Arena>,
+    game_state: Res<GameState>,
     difficulty: Res<Difficulty>,
     mut rng: ResMut<GameRng>,
     mut boat_spawner: ResMut<BoatSpawner>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
+    if let GameStates::GameOver = game_state.cur_state {
+        return;
+    }
+
     boat_spawner.spawn_timer.tick(time.delta_seconds);
 
     if boat_spawner.spawn_timer.finished {
@@ -325,6 +331,55 @@ pub(super) fn despawn_boat_system(
         let total = *total_hooks.get(&boat).unwrap();
         if count == total {
             commands.despawn_recursive(boat);
+        }
+    }
+}
+
+pub(super) fn boat_exit_system(
+    mut commands: Commands,
+    mut game_over_reader: Local<EventReader<GameOver>>,
+    game_over_events: Res<Events<GameOver>>,
+    mut query: Query<(
+        &Boat,
+        &mut SideScrollDirection,
+        &mut Velocity,
+        &Transform,
+        Entity,
+    )>,
+) {
+    if let Some(game_over_event) = game_over_reader.earliest(&game_over_events) {
+        for (_, mut direction, mut velocity, transform, entity) in query.iter_mut() {
+            if Some(entity) == game_over_event.winning_boat {
+                // remove the velocity of the boat that got the fish so it stays on screen
+                commands.remove_one::<Velocity>(entity);
+                continue;
+            }
+
+            // turn boat around if they havent passed halfway across the screen
+            if transform.translation.x() < 0.0 && direction.is_right()
+                || transform.translation.x() > 0.0 && direction.is_left()
+            {
+                direction.0 = !direction.0;
+                *velocity.0.x_mut() *= -1.0;
+            }
+
+            // make it go faster off the screen
+            velocity.0 *= 2.0;
+        }
+    }
+}
+
+pub(super) fn worm_eaten_system(
+    mut commands: Commands,
+    mut player_ate_reader: Local<EventReader<PlayerAte>>,
+    player_ate_events: Res<Events<PlayerAte>>,
+    query: Query<(&Worm, Entity)>,
+) {
+    for player_ate_event in player_ate_reader.iter(&player_ate_events) {
+        for (_, entity) in query.iter() {
+            if entity == player_ate_event.worm_entity {
+                commands.despawn_recursive(entity);
+            }
         }
     }
 }

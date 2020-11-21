@@ -12,7 +12,7 @@ pub struct PlayerStarved {
 
 pub struct PlayerBonked {
     pub player_entity: Entity,
-    pub hook_entity: Entity,
+    pub boat_entity: Entity,
     pub collision: Collision,
 }
 

@@ -46,6 +46,10 @@ impl Plugin for PlayerPlugin {
                 stages::CORRECT_MOVEMENT,
                 collision::player_worm_collision_system.system(),
             )
+            .add_system_to_stage(
+                stages::CORRECT_MOVEMENT,
+                collision::player_boat_collision_system.system(),
+            )
             // systems that handle presentation
             .init_resource::<render::PlayerSpriteHandles>()
             .init_resource::<render::PlayerStateAnimations>()

@@ -30,17 +30,20 @@ impl Plugin for SharedPlugin {
                 count: 0,
                 timer: Timer::from_seconds(1.0, true),
             })
+            .add_resource(game::GameState {
+                cur_state: game::GameStates::Running,
+                prev_state: game::GameStates::Running,
+            })
+            .add_event::<game::GameOver>()
+            .add_event::<game::GamePaused>()
             .add_system(game::difficulty_scaling_system.system())
             .add_system_to_stage(stage::LAST, game::increment_score_system.system())
+            .add_system_to_stage_front(stage::LAST, game::end_game_system.system())
+            .add_system_to_stage(stage::LAST, game::finalize_score.system())
             .add_system_to_stage(
                 stages::PREPARE_RENDER,
                 render::scale_camera_to_screen_size.system(),
             );
-        // .add_system_to_stage(
-        //     stages::PREPARE_RENDER,
-        //     render::scale_transforms_to_screen_size.system(),
-        // )
-        // .add_system_to_stage(stages::POST_RENDER, render::revert_transform_scale.system());
 
         // if cfg!(debug_assertions) {
         //     println!("Adding diagnostic plugins for debug mode...");
