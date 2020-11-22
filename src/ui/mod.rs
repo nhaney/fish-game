@@ -40,8 +40,8 @@ fn setup(
         .with_children(|parent| {
             println!("Adding score text to UI...");
             score::add_score_text(parent, &asset_server, &mut materials);
-            // println!("Adding blank game over text to UI...");
-            // game_over::add_game_over_text(parent, &asset_server);
+            println!("Adding blank game over text to UI...");
+            game_over::add_game_over_text(parent, &asset_server, &mut materials);
             println!("Adding pause button to UI...");
             pause::add_pause_button(parent, &pause_button_materials, &mut materials);
         });
