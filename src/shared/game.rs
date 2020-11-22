@@ -37,8 +37,8 @@ const MAX_DIFFICULTY: u8 = 4;
 const SCORE_PER_WORM: u8 = 5;
 
 pub struct Score {
-    pub(super) count: u32,
-    pub(super) timer: Timer,
+    pub count: u32,
+    pub timer: Timer,
 }
 
 pub struct Difficulty {

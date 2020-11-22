@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::collections::HashSet;
 
-use super::attributes::{Player, PlayerStats};
+use super::attributes::{BoostSupply, Player, PlayerStats};
 use super::movement::move_player_from_input;
 use crate::shared::movement::{SideScrollDirection, Velocity};
 
@@ -75,6 +75,7 @@ impl PlayerState {
         player_stats: &PlayerStats,
         facing: &SideScrollDirection,
         target_speed: &Vec3,
+        boost_supply: &mut BoostSupply,
     ) {
         if self.can_transition_to(PlayerStates::Boost) {
             // println!(
@@ -83,34 +84,46 @@ impl PlayerState {
             //     PlayerStates::Boost
             // );
 
-            let boost_direction = if *target_speed == Vec3::zero() {
-                if facing.is_right() {
-                    Vec3::unit_x()
+            if boost_supply.use_boost() {
+                let boost_direction = if *target_speed == Vec3::zero() {
+                    if facing.is_right() {
+                        Vec3::unit_x()
+                    } else {
+                        -Vec3::unit_x()
+                    }
                 } else {
-                    -Vec3::unit_x()
-                }
+                    target_speed.normalize()
+                };
+
+                let prev_state = self.current_state;
+
+                self.current_state = PlayerStates::Boost;
+
+                commands.insert(
+                    entity,
+                    (
+                        BoostCooldown {
+                            timer: Timer::from_seconds(player_stats.boost_cooldown, false),
+                            did_release: false,
+                        },
+                        BoostData {
+                            velocity: boost_direction * player_stats.boost_speed,
+                            timer: Timer::from_seconds(player_stats.boost_duration, false),
+                            prev_state,
+                        },
+                    ),
+                );
             } else {
-                target_speed.normalize()
-            };
-
-            let prev_state = self.current_state;
-
-            self.current_state = PlayerStates::Boost;
-
-            commands.insert(
-                entity,
-                (
+                // if the player was unable to boost, require that they release the boost
+                // button before attempting again
+                commands.insert_one(
+                    entity,
                     BoostCooldown {
-                        timer: Timer::from_seconds(player_stats.boost_cooldown, false),
+                        timer: Timer::from_seconds(0.0, false),
                         did_release: false,
                     },
-                    BoostData {
-                        velocity: boost_direction * player_stats.boost_speed,
-                        timer: Timer::from_seconds(player_stats.boost_duration, false),
-                        prev_state,
-                    },
-                ),
-            );
+                );
+            }
         }
     }
 }
@@ -143,9 +156,11 @@ pub(super) fn swim_movement_system(
         &mut SideScrollDirection,
         Entity,
         &mut PlayerState,
+        &mut BoostSupply,
     )>,
 ) {
-    for (player, mut velocity, mut facing, entity, mut state) in query.iter_mut() {
+    for (player, mut velocity, mut facing, entity, mut state, mut boost_supply) in query.iter_mut()
+    {
         if state.current_state != PlayerStates::Idle && state.current_state != PlayerStates::Swim {
             continue;
         }
@@ -154,7 +169,14 @@ pub(super) fn swim_movement_system(
             move_player_from_input(&keyboard_input, player, &mut velocity, &mut facing);
 
         if keyboard_input.pressed(KeyCode::Space) {
-            state.start_boost(&mut commands, entity, &player.stats, &facing, &target_speed);
+            state.start_boost(
+                &mut commands,
+                entity,
+                &player.stats,
+                &facing,
+                &target_speed,
+                &mut boost_supply,
+            );
         } else if target_speed != Vec3::zero() {
             state.start_swim();
         } else {

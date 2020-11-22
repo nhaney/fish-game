@@ -43,8 +43,8 @@
   * Audio?
 - [ ] Worm animation
 - [ ] Boat animation
-- [ ] Player starvation timer
-- [ ] Player boost controller
+- [x] Player starvation timer
+- [x] Player boost controller
 - [ ] UI
   * Score display
     * Changes color when at highest score

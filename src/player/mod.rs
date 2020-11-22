@@ -63,7 +63,10 @@ impl Plugin for PlayerPlugin {
             .add_event::<events::PlayerHooked>()
             .add_event::<events::PlayerStarved>()
             .add_event::<events::PlayerBonked>()
-            .add_event::<events::PlayerAte>();
+            .add_event::<events::PlayerAte>()
+            //attributes
+            .add_system_to_stage(stage::LAST, attributes::add_boost_system.system())
+            .add_system_to_stage(stage::LAST, attributes::hunger_countdown_system.system());
     }
 }
 
@@ -84,6 +87,14 @@ fn init_player(mut commands: Commands) {
             },
         },
         attributes::Sink { weight: 10.0 },
+        attributes::HungerCountdown {
+            time_left: 30.0,
+            extra_time_per_worm: 3.0,
+        },
+        attributes::BoostSupply {
+            max_boosts: 3,
+            count: 3,
+        },
         states::PlayerState {
             current_state: states::PlayerStates::Idle,
             blocked_transitions: HashSet::new(),

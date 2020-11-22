@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::camera::Camera};
+use bevy::{prelude::*, render::camera::Camera, ui::camera::UI_CAMERA};
 
 use super::arena::Arena;
 
@@ -15,7 +15,9 @@ pub(super) fn scale_camera_to_screen_size(
         1.0,
     );
 
-    for (_, mut camera_transform) in query.iter_mut() {
-        camera_transform.scale = scale;
+    for (camera, mut camera_transform) in query.iter_mut() {
+        if camera.name != Some(UI_CAMERA.to_string()) {
+            camera_transform.scale = scale;
+        }
     }
 }

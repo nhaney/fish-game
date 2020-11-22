@@ -3,6 +3,7 @@ use bevy::{prelude::*, window::WindowMode};
 mod objects;
 mod player;
 mod shared;
+mod ui;
 
 use shared::stages;
 
@@ -10,8 +11,8 @@ fn main() {
     App::build()
         .add_resource(WindowDescriptor {
             title: "Stay Off the Line!".to_string(),
-            width: 640,
-            height: 360,
+            width: 1280,
+            height: 720,
             vsync: false,
             resizable: true,
             mode: WindowMode::Windowed,
@@ -26,5 +27,6 @@ fn main() {
         .add_plugin(player::PlayerPlugin)
         .add_plugin(objects::ObjectPlugins)
         .add_plugin(shared::SharedPlugin)
+        .add_plugin(ui::UIPlugin)
         .run();
 }
