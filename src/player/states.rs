@@ -148,7 +148,7 @@ pub(super) struct BoostCooldown {
 
 /// Moves the player when they are not in the Boost state
 pub(super) fn swim_movement_system(
-    mut commands: Commands,
+    mut commands: &mut Commands,
     keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<(
         &Player,
@@ -187,7 +187,7 @@ pub(super) fn swim_movement_system(
 
 /// Movement system for a boosting player
 pub(super) fn boost_movement_system(
-    mut commands: Commands,
+    commands: &mut Commands,
     time: Res<Time>,
     mut query: Query<(&mut BoostData, &mut PlayerState, &mut Velocity, Entity)>,
 ) {
@@ -218,7 +218,7 @@ of the boost cooldown and must release the boost button before being able
 to boost again.
 */
 pub(super) fn boost_cooldown_system(
-    mut commands: Commands,
+    commands: &mut Commands,
     time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<(&mut BoostCooldown, &mut PlayerState, Entity)>,

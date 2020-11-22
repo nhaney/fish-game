@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 
-use crate::objects::boat::{Boat, Hook};
+use crate::objects::boat::Hook;
 use crate::player::events::{PlayerAte, PlayerBonked, PlayerHooked, PlayerStarved};
 
 #[derive(Debug, Copy, Clone)]
 pub enum GameStates {
     Running,
-    Paused,
+    // Paused,
     GameOver,
 }
 
@@ -83,7 +83,7 @@ pub(super) fn finalize_score(
     mut game_over_reader: Local<EventReader<GameOver>>,
     game_over_events: Res<Events<GameOver>>,
 ) {
-    if let Some(game_over_event) = game_over_reader.earliest(&game_over_events) {
+    if let Some(_game_over_event) = game_over_reader.earliest(&game_over_events) {
         println!("Final score: {:?}", score.count);
     }
 }

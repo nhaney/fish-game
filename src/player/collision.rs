@@ -27,21 +27,21 @@ pub(super) fn player_bounds_system(
         let player_half_width = collider.width / 2.0;
         let player_half_height = collider.height / 2.0;
 
-        if new_pos.x() - player_half_width < -arena_half_width {
-            *new_pos.x_mut() = -arena_half_width + player_half_width;
+        if new_pos.x - player_half_width < -arena_half_width {
+            new_pos.x = -arena_half_width + player_half_width;
         }
 
-        if new_pos.x() + player_half_width > arena_half_width {
-            *new_pos.x_mut() = arena_half_width - player_half_width;
+        if new_pos.x + player_half_width > arena_half_width {
+            new_pos.x = arena_half_width - player_half_width;
         }
 
-        if new_pos.y() - player_half_height < -arena_half_height {
-            *new_pos.y_mut() = -arena_half_height + player_half_height;
+        if new_pos.y - player_half_height < -arena_half_height {
+            new_pos.y = -arena_half_height + player_half_height;
         }
 
         // allow floating on the top
-        if new_pos.y() > (arena_half_height + arena.offset) {
-            *new_pos.y_mut() = arena_half_height + arena.offset;
+        if new_pos.y > (arena_half_height + arena.offset) {
+            new_pos.y = arena_half_height + arena.offset;
         }
     }
 }

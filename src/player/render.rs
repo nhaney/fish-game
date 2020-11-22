@@ -86,13 +86,13 @@ Adds the player sprite to a player without a sprite as soon as the textures
 load.
 */
 pub(super) fn load_player_atlas(
-    mut commands: Commands,
+    commands: &mut Commands,
     mut player_sprite_handles: ResMut<PlayerSpriteHandles>,
     mut player_state_animations: ResMut<PlayerStateAnimations>,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut textures: ResMut<Assets<Texture>>,
-    query: Query<Without<TextureAtlasSprite, (&Player, &PlayerState, Entity)>>,
+    query: Query<(&Player, &PlayerState, Entity), Without<TextureAtlasSprite>>,
 ) {
     if player_sprite_handles.atlas_loaded {
         return;
@@ -127,7 +127,7 @@ pub(super) fn load_player_atlas(
             println!("Adding sprite sheet components to entity: {:?}", entity);
             commands.insert(
                 entity,
-                SpriteSheetComponents {
+                SpriteSheetBundle {
                     sprite: TextureAtlasSprite::new(first_animation_frame.atlas_index as u32),
                     texture_atlas: atlas_handle.clone(),
                     ..Default::default()

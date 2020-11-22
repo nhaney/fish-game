@@ -88,7 +88,7 @@ pub(super) struct BoatSpawner {
 }
 
 pub(super) fn boat_spawner_system(
-    mut commands: Commands,
+    mut commands: &mut Commands,
     time: Res<Time>,
     arena: Res<Arena>,
     game_state: Res<GameState>,
@@ -162,7 +162,7 @@ fn spawn_boat(
             SideScrollDirection(facing_right),
             Boat,
         ))
-        .with_bundle(SpriteComponents {
+        .with_bundle(SpriteBundle {
             material: boat_material.clone(),
             sprite: Sprite {
                 size: Vec2::new(stats.width, stats.height),
@@ -212,8 +212,8 @@ fn spawn_lines(
         );
 
         let mid_point = Vec3::new(
-            (start_point.x() + end_point.x()) / 2.0,
-            (start_point.y() + end_point.y()) / 2.0,
+            (start_point.x + end_point.x) / 2.0,
+            (start_point.y + end_point.y) / 2.0,
             0.0,
         );
 
@@ -226,7 +226,7 @@ fn spawn_lines(
                     height: HOOK_SIZE,
                 },
             ))
-            .with_bundle(SpriteComponents {
+            .with_bundle(SpriteBundle {
                 sprite: Sprite {
                     size: Vec2::new(HOOK_SIZE, HOOK_SIZE),
                     ..Default::default()
@@ -251,7 +251,7 @@ fn spawn_lines(
                         height: WORM_SIZE,
                     },
                 ))
-                .with_bundle(SpriteComponents {
+                .with_bundle(SpriteBundle {
                     sprite: Sprite {
                         size: Vec2::new(WORM_SIZE, WORM_SIZE),
                         ..Default::default()
@@ -264,8 +264,8 @@ fn spawn_lines(
 
         // spawn the line between the start and end points
         let mut builder = PathBuilder::new();
-        builder.move_to(point(start_point.x(), start_point.y()));
-        builder.line_to(point(end_point.x(), end_point.y()));
+        builder.move_to(point(start_point.x, start_point.y));
+        builder.line_to(point(end_point.x, end_point.y));
         builder.close();
 
         let line = builder.build();
@@ -285,7 +285,7 @@ fn spawn_lines(
 }
 
 pub(super) fn despawn_boat_system(
-    mut commands: Commands,
+    commands: &mut Commands,
     arena: Res<Arena>,
     boat_query: Query<(&Boat, &Collider, &Transform, Entity)>,
     hook_query: Query<(&Hook, &Collider, &GlobalTransform, &Parent)>,
@@ -293,7 +293,7 @@ pub(super) fn despawn_boat_system(
     let mut boats_off_screen: Vec<Entity> = Vec::new();
 
     for (_, collider, transform, entity) in boat_query.iter() {
-        let boat_x = transform.translation.x();
+        let boat_x = transform.translation.x;
 
         if (boat_x + collider.width) < -(arena.width / 2.0)
             || (boat_x - collider.width) > (arena.width / 2.0)
@@ -314,7 +314,7 @@ pub(super) fn despawn_boat_system(
             continue;
         }
 
-        let hook_x = transform.translation.x();
+        let hook_x = transform.translation.x;
 
         if (hook_x + collider.width) < -(arena.width / 2.0)
             || (hook_x - collider.width) > (arena.width / 2.0)
@@ -336,7 +336,7 @@ pub(super) fn despawn_boat_system(
 }
 
 pub(super) fn boat_exit_system(
-    mut commands: Commands,
+    commands: &mut Commands,
     mut game_over_reader: Local<EventReader<GameOver>>,
     game_over_events: Res<Events<GameOver>>,
     mut query: Query<(
@@ -356,11 +356,11 @@ pub(super) fn boat_exit_system(
             }
 
             // turn boat around if they havent passed halfway across the screen
-            if transform.translation.x() < 0.0 && direction.is_right()
-                || transform.translation.x() > 0.0 && direction.is_left()
+            if transform.translation.x < 0.0 && direction.is_right()
+                || transform.translation.x > 0.0 && direction.is_left()
             {
                 direction.0 = !direction.0;
-                *velocity.0.x_mut() *= -1.0;
+                velocity.0.x *= -1.0;
             }
 
             // make it go faster off the screen
@@ -370,7 +370,7 @@ pub(super) fn boat_exit_system(
 }
 
 pub(super) fn worm_eaten_system(
-    mut commands: Commands,
+    commands: &mut Commands,
     mut player_ate_reader: Local<EventReader<PlayerAte>>,
     player_ate_events: Res<Events<PlayerAte>>,
     query: Query<(&Worm, Entity)>,

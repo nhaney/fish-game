@@ -17,21 +17,21 @@ pub(super) fn move_player_from_input(
     let mut target_speed = Vec3::zero();
 
     if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
-        *target_speed.x_mut() -= player.stats.speed;
+        target_speed.x -= player.stats.speed;
         facing.0 = false;
     }
 
     if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::D) {
-        *target_speed.x_mut() += player.stats.speed;
+        target_speed.x += player.stats.speed;
         facing.0 = true;
     }
 
     if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::W) {
-        *target_speed.y_mut() += player.stats.speed;
+        target_speed.y += player.stats.speed;
     }
 
     if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::S) {
-        *target_speed.y_mut() -= player.stats.speed;
+        target_speed.y -= player.stats.speed;
     }
 
     // determine whether to apply traction or regular acceleration
@@ -54,6 +54,6 @@ pub(super) fn move_player_from_input(
 /// sinks the player based on their weight
 pub(super) fn sink_system(mut query: Query<(&mut Velocity, &Sink)>) {
     for (mut velocity, sink) in query.iter_mut() {
-        *velocity.0.y_mut() -= sink.weight;
+        velocity.0.y -= sink.weight;
     }
 }

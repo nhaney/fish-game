@@ -10,24 +10,24 @@ pub struct UIPlugin;
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut AppBuilder) {
         println!("Building UI plugin...");
-        app.add_startup_system(setup.system())
+        app.add_startup_system(setup)
             // score text
-            .add_system(score::update_score_text.system())
+            .add_system(score::update_score_text)
             // pause button
             .init_resource::<pause::PauseButtonMaterials>()
-            .add_system(pause::pause_button_system.system());
+            .add_system(pause::pause_button_system);
     }
 }
 
 fn setup(
-    mut commands: Commands,
+    commands: &mut Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
     pause_button_materials: Res<pause::PauseButtonMaterials>,
 ) {
     commands
-        .spawn(UiCameraComponents::default())
-        .spawn(NodeComponents {
+        .spawn(UiCameraBundle::default())
+        .spawn(NodeBundle {
             style: Style {
                 size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
                 justify_content: JustifyContent::SpaceBetween,

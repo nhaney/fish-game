@@ -10,7 +10,7 @@ pub(super) fn add_score_text(
     materials: &mut Assets<ColorMaterial>,
 ) {
     parent
-        .spawn(NodeComponents {
+        .spawn(NodeBundle {
             style: Style {
                 justify_content: JustifyContent::Center,
                 padding: Rect {
@@ -26,7 +26,7 @@ pub(super) fn add_score_text(
         })
         .with_children(|parent| {
             parent
-                .spawn(TextComponents {
+                .spawn(TextBundle {
                     style: Style {
                         ..Default::default()
                     },

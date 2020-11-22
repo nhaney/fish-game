@@ -11,7 +11,7 @@ pub struct Arena {
     pub offset: f32,
 }
 
-pub fn initialize_arena(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
+pub fn initialize_arena(commands: &mut Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
     // initializes arena resource and its sprite representation
     let arena = Arena {
         width: DEFAULT_ARENA_WIDTH,
@@ -19,7 +19,7 @@ pub fn initialize_arena(mut commands: Commands, mut materials: ResMut<Assets<Col
         offset: DEFAULT_ARENA_OFFSET,
     };
 
-    commands.spawn(SpriteComponents {
+    commands.spawn(SpriteBundle {
         material: materials.add(Color::rgb_u8(173, 216, 230).into()),
         sprite: Sprite {
             size: Vec2::new(arena.width, arena.height),

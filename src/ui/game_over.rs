@@ -6,7 +6,7 @@ pub(super) fn add_game_over_text(
     materials: &mut Assets<ColorMaterial>,
 ) {
     parent
-        .spawn(NodeComponents {
+        .spawn(NodeBundle {
             style: Style {
                 size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
                 position_type: PositionType::Absolute,
@@ -22,7 +22,8 @@ pub(super) fn add_game_over_text(
             ..Default::default()
         })
         .with_children(|parent| {
-            parent.spawn(TextComponents {
+            parent.spawn(TextBundle
+               {
                 style: Style {
                     size: Size::new(Val::Px(100.0), Val::Px(100.0)),
                     align_self: AlignSelf::Center,
@@ -38,7 +39,8 @@ pub(super) fn add_game_over_text(
                         alignment: TextAlignment {
                             vertical: VerticalAlign::Center,
                             horizontal: HorizontalAlign::Center,
-                        }..Default::default(),
+                        },
+                        ..Default::default()
                     },
                 },
                 ..Default::default()

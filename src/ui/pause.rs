@@ -27,11 +27,13 @@ impl FromResources for PauseButtonMaterials {
 
 pub(super) fn pause_button_system(
     pause_button_materials: Res<PauseButtonMaterials>,
-    mut interaction_query: Query<(
-        Mutated<Interaction>,
+    mut interaction_query: Query<
+    (
+        &Interaction,
         &mut Handle<ColorMaterial>,
-        &mut PauseButton,
-    )>,
+        &mut PauseButton
+    ),
+    Mutated<Interaction>>
 ) {
     for (interaction, mut material, mut pause_button) in interaction_query.iter_mut() {
         if let Interaction::Clicked = *interaction {
@@ -52,7 +54,7 @@ pub(super) fn add_pause_button(
     materials: &mut Assets<ColorMaterial>,
 ) {
     container
-        .spawn(NodeComponents {
+        .spawn(NodeBundle {
             style: Style {
                 justify_content: JustifyContent::Center,
                 padding: Rect {
@@ -68,7 +70,7 @@ pub(super) fn add_pause_button(
         })
         .with_children(|parent| {
             parent
-                .spawn(ButtonComponents {
+                .spawn(ButtonBundle {
                     style: Style {
                         size: Size::new(Val::Px(64.0), Val::Px(64.0)),
                         ..Default::default()

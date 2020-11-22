@@ -11,9 +11,9 @@ impl Plugin for ObjectPlugins {
         app.add_resource(boat::BoatSpawner {
             spawn_timer: Timer::from_seconds(5.0, true),
         })
-        .add_system_to_stage(stage::EVENT, boat::boat_spawner_system.system())
-        .add_system_to_stage(stages::CORRECT_MOVEMENT, boat::despawn_boat_system.system())
-        .add_system_to_stage(stage::LAST, boat::boat_exit_system.system())
-        .add_system_to_stage(stage::LAST, boat::worm_eaten_system.system());
+        .add_system_to_stage(stage::EVENT, boat::boat_spawner_system)
+        .add_system_to_stage(stages::CORRECT_MOVEMENT, boat::despawn_boat_system)
+        .add_system_to_stage(stage::LAST, boat::boat_exit_system)
+        .add_system_to_stage(stage::LAST, boat::worm_eaten_system);
     }
 }
