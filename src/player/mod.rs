@@ -6,7 +6,7 @@ use crate::shared::{
 use bevy::prelude::*;
 use std::collections::HashSet;
 
-mod attributes;
+pub(crate) mod attributes;
 mod collision;
 pub(crate) mod events;
 mod movement;
@@ -20,24 +20,12 @@ impl Plugin for PlayerPlugin {
         println!("Building player plugin...");
         app.add_startup_system(init_player)
             // systems that handle input/movement
-            .add_system_to_stage(
-                stages::CALCULATE_VELOCITY,
-                states::swim_movement_system,
-            )
-            .add_system_to_stage(
-                stages::CALCULATE_VELOCITY,
-                states::boost_movement_system,
-            )
-            .add_system_to_stage(
-                stages::CALCULATE_VELOCITY,
-                states::boost_cooldown_system,
-            )
+            .add_system_to_stage(stages::CALCULATE_VELOCITY, states::swim_movement_system)
+            .add_system_to_stage(stages::CALCULATE_VELOCITY, states::boost_movement_system)
+            .add_system_to_stage(stages::CALCULATE_VELOCITY, states::boost_cooldown_system)
             .add_system_to_stage(stages::CALCULATE_VELOCITY, movement::sink_system)
             // systems that handle collision
-            .add_system_to_stage(
-                stages::CORRECT_MOVEMENT,
-                collision::player_bounds_system,
-            )
+            .add_system_to_stage(stages::CORRECT_MOVEMENT, collision::player_bounds_system)
             .add_system_to_stage(
                 stages::CORRECT_MOVEMENT,
                 collision::player_hook_collision_system,
@@ -106,4 +94,6 @@ fn init_player(commands: &mut Commands) {
             height: PLAYER_HEIGHT,
         },
     ));
+
+    // render::spawn_player_boost_trackers(commands, player_entity, player_size, boost_supply, materials, meshes)
 }

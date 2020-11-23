@@ -28,12 +28,9 @@ impl FromResources for PauseButtonMaterials {
 pub(super) fn pause_button_system(
     pause_button_materials: Res<PauseButtonMaterials>,
     mut interaction_query: Query<
-    (
-        &Interaction,
-        &mut Handle<ColorMaterial>,
-        &mut PauseButton
-    ),
-    Mutated<Interaction>>
+        (&Interaction, &mut Handle<ColorMaterial>, &mut PauseButton),
+        Mutated<Interaction>,
+    >,
 ) {
     for (interaction, mut material, mut pause_button) in interaction_query.iter_mut() {
         if let Interaction::Clicked = *interaction {

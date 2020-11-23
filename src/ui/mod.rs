@@ -15,7 +15,14 @@ impl Plugin for UIPlugin {
             .add_system(score::update_score_text)
             // pause button
             .init_resource::<pause::PauseButtonMaterials>()
-            .add_system(pause::pause_button_system);
+            .add_system(pause::pause_button_system)
+            // game over text
+            .add_system(game_over::show_game_over_text)
+            // player countdown text
+            // TODO: Clean this up, put it in player plugin?
+            .add_startup_system(player::add_countdown_text)
+            .add_system(player::update_coundown_text_system)
+            .add_system(player::reposition_countdown_text_system);
     }
 }
 

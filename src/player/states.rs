@@ -168,7 +168,7 @@ pub(super) fn swim_movement_system(
         let target_speed =
             move_player_from_input(&keyboard_input, player, &mut velocity, &mut facing);
 
-        if keyboard_input.pressed(KeyCode::Space) {
+        if keyboard_input.just_pressed(KeyCode::Space) {
             state.start_boost(
                 &mut commands,
                 entity,

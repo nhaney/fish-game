@@ -5,7 +5,7 @@ use super::events::{PlayerAte, PlayerStarved};
 use crate::shared::game::{GameState, GameStates};
 
 #[derive(Debug)]
-pub(super) struct PlayerStats {
+pub(crate) struct PlayerStats {
     pub boost_speed: f32,
     pub boost_duration: f32,
     pub boost_cooldown: f32,
@@ -16,7 +16,7 @@ pub(super) struct PlayerStats {
 }
 
 #[derive(Debug)]
-pub(super) struct Player {
+pub(crate) struct Player {
     pub stats: PlayerStats,
 }
 
@@ -62,7 +62,7 @@ pub(super) struct Sink {
     pub weight: f32,
 }
 
-pub(super) struct HungerCountdown {
+pub(crate) struct HungerCountdown {
     pub time_left: f32,
     pub extra_time_per_worm: f32,
 }

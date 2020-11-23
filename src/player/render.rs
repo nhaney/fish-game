@@ -1,9 +1,13 @@
 use bevy::{asset::LoadState, prelude::*, sprite::TextureAtlasBuilder};
+use bevy_prototype_lyon::prelude::*;
 use std::collections::HashMap;
 
-use super::attributes::Player;
+use super::attributes::{BoostSupply, Player};
 use super::states::{PlayerState, PlayerStates};
-use crate::shared::animation::{Animation, AnimationFrame, AnimationState};
+use crate::shared::{
+    animation::{Animation, AnimationFrame, AnimationState},
+    collision::Collider,
+};
 
 #[derive(Default)]
 pub(super) struct PlayerStateAnimations {
@@ -178,4 +182,45 @@ pub(super) fn player_state_animation_change_system(
             last_entity_states.insert(entity, *cur_player_state);
         }
     }
+}
+
+pub(super) fn spawn_player_boost_trackers(
+    commands: &mut Commands,
+    player_entity: Entity,
+    player_size: &Collider,
+    boost_supply: &BoostSupply,
+    materials: &mut Assets<ColorMaterial>,
+    mut meshes: ResMut<Assets<Mesh>>,
+) {
+    // calculate the positions of each of the boost trackers relative to the player
+    // given the player's size and number of boosts
+    let max_boosts = boost_supply.max_boosts;
+
+    let extended_width = player_size.width * 1.5;
+    let tracker_height = player_size.height / 2.0;
+
+    let mut tracker_positions: Vec<Vec3> = Vec::new();
+
+    for i in 1..max_boosts + 1 {
+        let x_offset = i as f32 * (extended_width / (max_boosts + 1) as f32);
+        tracker_positions.push(Vec3::new(x_offset, tracker_height, 1.0));
+    }
+
+    let light_pink = materials.add(Color::PINK.into());
+    let mut tracker_entities: Vec<Entity> = Vec::new();
+
+    for tracker_position in tracker_positions {
+        let spawned_tracker = commands
+                .spawn(primitive(
+                    light_pink.clone(),
+                    &mut meshes,
+                    ShapeType::Circle(30.0),
+                    TessellationMode::Fill(&FillOptions::default()),
+                    tracker_position,
+                ))
+                .current_entity().unwrap();
+        tracker_entities.push(spawned_tracker);
+    }
+
+    // commands.push_children(player_entity, tracker_entities);
 }

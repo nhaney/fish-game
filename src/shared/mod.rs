@@ -38,10 +38,7 @@ impl Plugin for SharedPlugin {
             .add_system_to_stage(stage::LAST, game::increment_score_system)
             .add_system_to_stage_front(stage::LAST, game::end_game_system)
             .add_system_to_stage(stage::LAST, game::finalize_score)
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                render::scale_camera_to_screen_size,
-            );
+            .add_system_to_stage(stages::PREPARE_RENDER, render::scale_camera_to_screen_size);
 
         // if cfg!(debug_assertions) {
         //     println!("Adding diagnostic plugins for debug mode...");
