@@ -96,7 +96,10 @@ pub(super) fn load_player_atlas(
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut textures: ResMut<Assets<Texture>>,
-    query: Query<(&Player, &PlayerState, Entity), Without<TextureAtlasSprite>>,
+    query: Query<
+        (&PlayerState, &Collider, &BoostSupply, Entity),
+        (With<Player>, Without<TextureAtlasSprite>),
+    >,
 ) {
     if player_sprite_handles.atlas_loaded {
         return;
@@ -121,7 +124,7 @@ pub(super) fn load_player_atlas(
         let atlas_handle = texture_atlases.add(texture_atlas);
 
         // adds the sprite sheet component and animation state component to the player entities
-        for (_, player_state, entity) in query.iter() {
+        for (player_state, collider, boost_supply, entity) in query.iter() {
             let player_animation = player_state_animations
                 .map
                 .get(&player_state.current_state)
@@ -186,31 +189,37 @@ pub(super) fn player_state_animation_change_system(
 
 pub(super) fn spawn_player_boost_trackers(
     commands: &mut Commands,
-    player_entity: Entity,
-    player_size: &Collider,
-    boost_supply: &BoostSupply,
-    materials: &mut Assets<ColorMaterial>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut has_loaded: Local<bool>,
+    player_query: Query<(Entity, &Collider, &BoostSupply)>,
 ) {
-    // calculate the positions of each of the boost trackers relative to the player
-    // given the player's size and number of boosts
-    let max_boosts = boost_supply.max_boosts;
-
-    let extended_width = player_size.width * 1.5;
-    let tracker_height = player_size.height / 2.0;
-
-    let mut tracker_positions: Vec<Vec3> = Vec::new();
-
-    for i in 1..max_boosts + 1 {
-        let x_offset = i as f32 * (extended_width / (max_boosts + 1) as f32);
-        tracker_positions.push(Vec3::new(x_offset, tracker_height, 1.0));
+    if has_loaded {
+        return;
     }
 
-    let light_pink = materials.add(Color::PINK.into());
-    let mut tracker_entities: Vec<Entity> = Vec::new();
 
-    for tracker_position in tracker_positions {
-        let spawned_tracker = commands
+    // calculate the positions of each of the boost trackers relative to the player
+    // given the player's size and number of boosts
+    let light_pink = materials.add(Color::PINK.into());
+
+    println!("Adding boost trackers...");
+    for (player_entity, player_size, boost_supply) in player_query.iter() {
+        println!("In loop...");
+        let max_boosts = boost_supply.max_boosts;
+
+        let extended_width = player_size.width * 1.5;
+        let tracker_height = player_size.height / 2.0;
+
+        let mut tracker_positions: Vec<Vec3> = Vec::new();
+
+        for i in 1..max_boosts + 1 {
+            let x_offset = i as f32 * (extended_width / (max_boosts + 1) as f32);
+            tracker_positions.push(Vec3::new(x_offset, tracker_height, 1.0));
+        }
+
+        for tracker_position in tracker_positions {
+            let spawned_tracker = commands
                 .spawn(primitive(
                     light_pink.clone(),
                     &mut meshes,
@@ -218,9 +227,12 @@ pub(super) fn spawn_player_boost_trackers(
                     TessellationMode::Fill(&FillOptions::default()),
                     tracker_position,
                 ))
-                .current_entity().unwrap();
-        tracker_entities.push(spawned_tracker);
+                .current_entity()
+                .unwrap();
+
+            commands.push_children(player_entity, &[spawned_tracker]);
+        }
     }
 
-    // commands.push_children(player_entity, tracker_entities);
+    has_loaded = true;
 }
