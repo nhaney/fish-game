@@ -21,3 +21,17 @@ pub(super) fn scale_camera_to_screen_size(
         }
     }
 }
+
+pub struct NonRotatingChild;
+
+/** Rotates the child element so that compared to the parent's rotation it is the
+  TODO: MAKE THIS WORK
+*/
+pub(super) fn readjust_rotation(
+    mut query: Query<(&mut GlobalTransform, &Transform), With<NonRotatingChild>>,
+) {
+    for (mut global_transform, transform) in query.iter_mut() {
+        // println!("Rotation of boost tracker: {:?}", transform.rotation);
+        global_transform.rotation = Quat::identity();
+    }
+}

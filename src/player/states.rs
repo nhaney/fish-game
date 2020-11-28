@@ -83,7 +83,6 @@ impl PlayerState {
             //     self.current_state,
             //     PlayerStates::Boost
             // );
-
             if boost_supply.use_boost() {
                 let boost_direction = if *target_speed == Vec3::zero() {
                     if facing.is_right() {

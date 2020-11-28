@@ -6,7 +6,7 @@ use crate::player::events::PlayerAte;
 use crate::shared::{
     arena::Arena,
     collision::Collider,
-    game::{Difficulty, GameOver, GameState, GameStates},
+    game::{Difficulty, GameOver, GameRestarted, GameState, GameStates},
     movement::{SideScrollDirection, Velocity},
     rng::GameRng,
 };
@@ -93,6 +93,7 @@ pub(super) fn boat_spawner_system(
     arena: Res<Arena>,
     game_state: Res<GameState>,
     difficulty: Res<Difficulty>,
+    asset_server: Res<AssetServer>,
     mut rng: ResMut<GameRng>,
     mut boat_spawner: ResMut<BoatSpawner>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -114,6 +115,7 @@ pub(super) fn boat_spawner_system(
                 &mut meshes,
                 &arena,
                 &mut rng.rng,
+                &asset_server,
             );
         }
     }
@@ -126,6 +128,7 @@ fn spawn_boat(
     meshes: &mut ResMut<Assets<Mesh>>,
     arena: &Arena,
     rng: &mut ChaCha8Rng,
+    asset_server: &AssetServer,
 ) {
     let facing_right: bool = rng.gen();
 
@@ -143,13 +146,15 @@ fn spawn_boat(
         match facing_right {
             // going from the right to the left
             true => stats.speed,
+            // going from the left to the right
             false => -stats.speed,
         },
         0.0,
         0.0,
     );
 
-    let boat_material = materials.add(Color::rgb(rng.gen(), rng.gen(), rng.gen()).into());
+    // let boat_material = materials.add(Color::rgb(rng.gen(), rng.gen(), rng.gen()).into());
+    let boat_material = materials.add(asset_server.load("sprites/boat/boat.png").into());
 
     // spawn boat
     commands
@@ -381,5 +386,23 @@ pub(super) fn worm_eaten_system(
                 commands.despawn_recursive(entity);
             }
         }
+    }
+}
+
+pub(super) fn reset_boats_on_restart(
+    commands: &mut Commands,
+    mut boat_spawner: ResMut<BoatSpawner>,
+    restart_events: Res<Events<GameRestarted>>,
+    mut restart_reader: Local<EventReader<GameRestarted>>,
+    boat_query: Query<Entity, With<Boat>>,
+) {
+    if let Some(_) = restart_reader.earliest(&restart_events) {
+        println!("Despawning all boats and restarting spawner because of restart event.");
+        // despawn all boats
+        for boat_entity in boat_query.iter() {
+            commands.despawn_recursive(boat_entity);
+        }
+        // reset spawner
+        boat_spawner.spawn_timer = Timer::from_seconds(5.0, true);
     }
 }

@@ -34,11 +34,18 @@ impl Plugin for SharedPlugin {
             })
             .add_event::<game::GameOver>()
             .add_event::<game::GamePaused>()
-            .add_system(game::difficulty_scaling_system.system())
+            .add_event::<game::GameRestarted>()
+            .add_system(game::difficulty_scaling_system)
             .add_system_to_stage(stage::LAST, game::increment_score_system)
             .add_system_to_stage_front(stage::LAST, game::end_game_system)
             .add_system_to_stage(stage::LAST, game::finalize_score)
-            .add_system_to_stage(stages::PREPARE_RENDER, render::scale_camera_to_screen_size);
+            .add_system_to_stage(stages::PREPARE_RENDER, render::scale_camera_to_screen_size)
+            .add_system_to_stage(stage::POST_UPDATE, render::readjust_rotation)
+            .add_system_to_stage(stage::LAST, rng::reset_rng_on_restart)
+            .add_system_to_stage(stage::LAST, game::reset_difficulty_on_restart)
+            .add_system_to_stage(stage::LAST, game::reset_game_state_on_restart)
+            .add_system_to_stage(stage::LAST, game::reset_score_on_restart)
+            .add_system_to_stage(stages::CALCULATE_VELOCITY, game::restart_game);
 
         // if cfg!(debug_assertions) {
         //     println!("Adding diagnostic plugins for debug mode...");

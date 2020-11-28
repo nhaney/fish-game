@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::player::events::{PlayerBonked, PlayerHooked, PlayerStarved};
+use crate::shared::game::GameRestarted;
 
 pub(super) struct GameOverText;
 pub(super) struct RestartText;
@@ -120,6 +121,27 @@ pub(super) fn show_game_over_text(
 
         for mut restart_text_draw in restart_text_query.iter_mut() {
             restart_text_draw.is_visible = true;
+        }
+    }
+}
+
+pub(super) fn clear_game_over_message_on_restart(
+    restart_events: Res<Events<GameRestarted>>,
+    mut restart_reader: Local<EventReader<GameRestarted>>,
+    mut game_over_text_query: Query<&mut Draw, (With<GameOverText>, With<Children>)>,
+    mut restart_text_query: Query<
+        &mut Draw,
+        (Without<GameOverText>, With<Parent>, With<RestartText>),
+    >,
+) {
+    if let Some(_) = restart_reader.earliest(&restart_events) {
+        println!("Clearing game over text after game was restarted.");
+        for mut game_over_draw in game_over_text_query.iter_mut() {
+            game_over_draw.is_visible = false;
+        }
+
+        for mut restart_text_draw in restart_text_query.iter_mut() {
+            restart_text_draw.is_visible = false;
         }
     }
 }

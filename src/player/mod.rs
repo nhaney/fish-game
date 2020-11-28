@@ -1,5 +1,6 @@
 use crate::shared::{
     collision::Collider,
+    game::GameRestarted,
     movement::{SideScrollDirection, Velocity},
     stages,
 };
@@ -19,7 +20,6 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut AppBuilder) {
         println!("Building player plugin...");
         app.add_startup_system(init_player)
-            .add_startup_system(render::spawn_player_boost_trackers)
             // systems that handle input/movement
             .add_system_to_stage(stages::CALCULATE_VELOCITY, states::swim_movement_system)
             .add_system_to_stage(stages::CALCULATE_VELOCITY, states::boost_movement_system)
@@ -55,14 +55,70 @@ impl Plugin for PlayerPlugin {
             .add_event::<events::PlayerAte>()
             //attributes
             .add_system_to_stage(stage::LAST, attributes::add_boost_system)
-            .add_system_to_stage(stage::LAST, attributes::hunger_countdown_system);
+            .add_system_to_stage(stage::LAST, attributes::hunger_countdown_system)
+            .add_system_to_stage(
+                stage::LAST,
+                render::update_tracker_display_from_boost_supply,
+            )
+            .add_system_to_stage(stage::LAST, reset_player);
     }
 }
 
 const PLAYER_WIDTH: f32 = 32.0;
 const PLAYER_HEIGHT: f32 = 32.0;
+const PLAYER_MAX_BOOSTS: u8 = 1;
 
-fn init_player(commands: &mut Commands) {
+fn init_player(
+    mut commands: &mut Commands,
+    materials: ResMut<Assets<ColorMaterial>>,
+    meshes: ResMut<Assets<Mesh>>,
+) {
+    let player_entity = spawn_player_entity(commands);
+    render::spawn_player_boost_trackers(
+        &mut commands,
+        materials,
+        meshes,
+        PLAYER_WIDTH,
+        PLAYER_HEIGHT,
+        PLAYER_MAX_BOOSTS,
+        player_entity,
+    );
+}
+
+// TODO: Make this support more than one player
+fn reset_player(
+    mut commands: &mut Commands,
+    materials: ResMut<Assets<ColorMaterial>>,
+    meshes: ResMut<Assets<Mesh>>,
+    restart_events: Res<Events<GameRestarted>>,
+    mut player_sprite_handles: ResMut<render::PlayerSpriteHandles>,
+    mut restart_reader: Local<EventReader<GameRestarted>>,
+    player_query: Query<Entity, With<attributes::Player>>,
+) {
+    if let Some(_) = restart_reader.earliest(&restart_events) {
+        println!("Despawning current player entity and creating a new one.");
+        let player_entity = player_query.iter().next().unwrap();
+        // despawn current player
+        commands.despawn_recursive(player_entity);
+
+        // mark that new sprites need to be added to the player
+        player_sprite_handles.atlas_loaded = false;
+
+        // spawn a new player with new ui components
+        let new_player = spawn_player_entity(commands);
+        render::spawn_player_boost_trackers(
+            &mut commands,
+            materials,
+            meshes,
+            PLAYER_WIDTH,
+            PLAYER_HEIGHT,
+            PLAYER_MAX_BOOSTS,
+            new_player,
+        );
+    }
+}
+
+fn spawn_player_entity(commands: &mut Commands) -> Entity {
     commands
         .spawn((
             attributes::Player {
@@ -82,7 +138,7 @@ fn init_player(commands: &mut Commands) {
                 extra_time_per_worm: 3.0,
             },
             attributes::BoostSupply {
-                max_boosts: 3,
+                max_boosts: PLAYER_MAX_BOOSTS,
                 count: 3,
             },
             states::PlayerState {
@@ -95,5 +151,7 @@ fn init_player(commands: &mut Commands) {
                 width: PLAYER_WIDTH,
                 height: PLAYER_HEIGHT,
             },
-        ));
+        ))
+        .current_entity()
+        .unwrap()
 }

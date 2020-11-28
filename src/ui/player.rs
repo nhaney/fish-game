@@ -25,6 +25,10 @@ pub(super) fn add_countdown_text(commands: &mut Commands, asset_server: Res<Asse
                 font: asset_server.load("fonts/Chonkly.ttf"),
                 style: TextStyle {
                     font_size: 30.0,
+                    alignment: TextAlignment {
+                        vertical: VerticalAlign::Center,
+                        horizontal: HorizontalAlign::Center,
+                    },
                     ..Default::default()
                 },
             },

@@ -16,7 +16,9 @@ impl SideScrollDirection {
 
 pub fn movement_system(time: Res<Time>, mut query: Query<(&Velocity, &mut Transform)>) {
     for (velocity, mut transform) in query.iter_mut() {
-        transform.translation += time.delta_seconds * velocity.0;
+        transform.translation.x += time.delta_seconds * velocity.0.x;
+        transform.translation.y += time.delta_seconds * velocity.0.y;
+        transform.translation.z = 1.0;
     }
 }
 

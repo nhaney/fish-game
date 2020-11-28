@@ -7,6 +7,7 @@ use super::states::{PlayerState, PlayerStates};
 use crate::shared::{
     animation::{Animation, AnimationFrame, AnimationState},
     collision::Collider,
+    render::NonRotatingChild,
 };
 
 #[derive(Default)]
@@ -74,7 +75,7 @@ fn create_player_animations(
 #[derive(Default)]
 pub struct PlayerSpriteHandles {
     handles: Vec<HandleUntyped>,
-    atlas_loaded: bool,
+    pub atlas_loaded: bool,
 }
 
 pub(super) fn start_atlas_load(
@@ -187,52 +188,103 @@ pub(super) fn player_state_animation_change_system(
     }
 }
 
+/**
+    Design:
+    * Boost supply tracker component manages the visibility (Draw.is_visible)
+      of the three (or more) sprite entities (can these all be on the same entity? no.)
+      that represent the number of boosts available.
+*/
+pub(super) struct BoostTracker;
+
 pub(super) fn spawn_player_boost_trackers(
     commands: &mut Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut has_loaded: Local<bool>,
-    player_query: Query<(Entity, &Collider, &BoostSupply)>,
+    player_width: f32,
+    player_height: f32,
+    max_boosts: u8,
+    player_entity: Entity,
 ) {
-    if has_loaded {
-        return;
-    }
-
-
     // calculate the positions of each of the boost trackers relative to the player
     // given the player's size and number of boosts
-    let light_pink = materials.add(Color::PINK.into());
+    let pink_color = materials.add(Color::PINK.into());
+    let hot_pink_color = materials.add(Color::rgb_u8(255, 105, 180).into());
 
-    println!("Adding boost trackers...");
-    for (player_entity, player_size, boost_supply) in player_query.iter() {
-        println!("In loop...");
-        let max_boosts = boost_supply.max_boosts;
+    println!("Adding boost trackers for player {:?}...", player_entity);
 
-        let extended_width = player_size.width * 1.5;
-        let tracker_height = player_size.height / 2.0;
+    let extended_width = player_width;
+    let tracker_height = player_height;
 
-        let mut tracker_positions: Vec<Vec3> = Vec::new();
+    let mut tracker_positions: Vec<Vec3> = Vec::new();
 
-        for i in 1..max_boosts + 1 {
-            let x_offset = i as f32 * (extended_width / (max_boosts + 1) as f32);
-            tracker_positions.push(Vec3::new(x_offset, tracker_height, 1.0));
-        }
-
-        for tracker_position in tracker_positions {
-            let spawned_tracker = commands
-                .spawn(primitive(
-                    light_pink.clone(),
-                    &mut meshes,
-                    ShapeType::Circle(30.0),
-                    TessellationMode::Fill(&FillOptions::default()),
-                    tracker_position,
-                ))
-                .current_entity()
-                .unwrap();
-
-            commands.push_children(player_entity, &[spawned_tracker]);
-        }
+    for i in 0..max_boosts {
+        let x_offset = (i as f32 * (extended_width / max_boosts as f32)) - (extended_width / 2.0);
+        tracker_positions.push(Vec3::new(x_offset, tracker_height, 1.0));
     }
 
-    has_loaded = true;
+    let mut boost_trackers: Vec<Entity> = Vec::new();
+
+    for tracker_position in tracker_positions {
+        // make the border and the tracker child components of the player
+        let tracker = commands
+            .spawn(primitive(
+                pink_color.clone(),
+                &mut meshes,
+                ShapeType::Circle(5.0),
+                TessellationMode::Fill(&FillOptions::default()),
+                tracker_position,
+            ))
+            .with(BoostTracker)
+            .with(NonRotatingChild)
+            .current_entity()
+            .unwrap();
+
+        let tracker_border = commands
+            .spawn(primitive(
+                hot_pink_color.clone(),
+                &mut meshes,
+                ShapeType::Circle(6.0),
+                TessellationMode::Stroke(&StrokeOptions::default()),
+                tracker_position,
+            ))
+            .with(NonRotatingChild)
+            .current_entity()
+            .unwrap();
+
+        commands.push_children(player_entity, &[tracker, tracker_border]);
+        boost_trackers.push(tracker);
+    }
+
+    println!("Added boost tracker entities: {:?}", boost_trackers);
+
+    commands.insert_one(
+        player_entity,
+        BoostTrackerDisplay {
+            trackers: boost_trackers,
+        },
+    );
+}
+
+pub(super) struct BoostTrackerDisplay {
+    trackers: Vec<Entity>,
+}
+
+// TODO: Update to also handle changes to max boosts here, make this use "changed" instead of updating every
+// frame
+pub(super) fn update_tracker_display_from_boost_supply(
+    player_query: Query<(&BoostSupply, &BoostTrackerDisplay)>,
+    mut tracker_query: Query<(&mut Draw, &GlobalTransform), With<BoostTracker>>,
+) {
+    for (boost_supply, boost_tracker_display) in player_query.iter() {
+        for i in 0..boost_supply.max_boosts {
+            let tracker_entity = boost_tracker_display.trackers[i as usize];
+            let (mut tracker_draw, transform) = tracker_query.get_mut(tracker_entity).unwrap();
+
+            if (i + 1) <= boost_supply.count {
+                tracker_draw.is_visible = true;
+            } else {
+                tracker_draw.is_visible = false;
+            }
+        }
+    }
 }

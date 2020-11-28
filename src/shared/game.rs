@@ -26,12 +26,22 @@ impl GameState {
     }
 }
 
+pub(super) fn restart_game(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut restart_events: ResMut<Events<GameRestarted>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::R) {
+        restart_events.send(GameRestarted);
+    }
+}
+
 // Events
 pub struct GameOver {
     pub winning_boat: Option<Entity>,
 }
 
 pub struct GamePaused;
+pub struct GameRestarted;
 
 const MAX_DIFFICULTY: u8 = 4;
 const SCORE_PER_WORM: u8 = 5;
@@ -120,5 +130,41 @@ pub(super) fn end_game_system(
             winning_boat: Some(bonked_event.boat_entity),
         });
         game_state.transition(GameStates::GameOver);
+    }
+}
+
+pub(super) fn reset_difficulty_on_restart(
+    mut difficulty: ResMut<Difficulty>,
+    restart_events: Res<Events<GameRestarted>>,
+    mut restart_reader: Local<EventReader<GameRestarted>>,
+) {
+    if let Some(_) = restart_reader.earliest(&restart_events) {
+        println!("Resetting difficulty after restart");
+        difficulty.multiplier = 1;
+        difficulty.timer = Timer::from_seconds(10.0, true);
+    }
+}
+
+pub(super) fn reset_score_on_restart(
+    mut score: ResMut<Score>,
+    restart_events: Res<Events<GameRestarted>>,
+    mut restart_reader: Local<EventReader<GameRestarted>>,
+) {
+    if let Some(_) = restart_reader.earliest(&restart_events) {
+        println!("Resetting score after restart");
+        score.count = 0;
+        score.timer = Timer::from_seconds(1.0, true);
+    }
+}
+
+pub(super) fn reset_game_state_on_restart(
+    mut game_state: ResMut<GameState>,
+    restart_events: Res<Events<GameRestarted>>,
+    mut restart_reader: Local<EventReader<GameRestarted>>,
+) {
+    if let Some(_) = restart_reader.earliest(&restart_events) {
+        println!("Resetting game state after restart");
+        game_state.cur_state = GameStates::Running;
+        game_state.prev_state = GameStates::Running;
     }
 }

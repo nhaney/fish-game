@@ -14,6 +14,7 @@ impl Plugin for ObjectPlugins {
         .add_system_to_stage(stage::EVENT, boat::boat_spawner_system)
         .add_system_to_stage(stages::CORRECT_MOVEMENT, boat::despawn_boat_system)
         .add_system_to_stage(stage::LAST, boat::boat_exit_system)
-        .add_system_to_stage(stage::LAST, boat::worm_eaten_system);
+        .add_system_to_stage(stage::LAST, boat::worm_eaten_system)
+        .add_system_to_stage(stage::LAST, boat::reset_boats_on_restart);
     }
 }
