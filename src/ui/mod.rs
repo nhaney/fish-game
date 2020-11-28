@@ -23,7 +23,8 @@ impl Plugin for UIPlugin {
             .add_startup_system(player::add_countdown_text)
             .add_system(player::update_coundown_text_system)
             .add_system(player::reposition_countdown_text_system)
-            .add_system_to_stage(stage::LAST, game_over::clear_game_over_message_on_restart);
+            .add_system_to_stage(stage::LAST, game_over::clear_game_over_message_on_restart)
+            .add_system_to_stage(stage::LAST, pause::reset_pause_button_on_restart);
     }
 }
 

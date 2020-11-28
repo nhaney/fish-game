@@ -99,7 +99,7 @@ pub(super) fn boat_spawner_system(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    if let GameStates::GameOver = game_state.cur_state {
+    if !game_state.is_running() {
         return;
     }
 

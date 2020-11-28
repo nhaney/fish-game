@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use super::game::GameState;
+
 /**
 Represents one frame of animation. The atlas index references the TextureAtlas
 handle on the entity.
@@ -29,8 +31,13 @@ pub struct AnimationState {
 /// Transitions the animation state if it is time for the next frame
 pub(super) fn animation_system(
     time: Res<Time>,
+    game_state: Res<GameState>,
     mut query: Query<(&mut AnimationState, &mut TextureAtlasSprite)>,
 ) {
+    if !game_state.is_running() {
+        return;
+    }
+
     for (mut animation_state, mut texture_atlas_sprite) in query.iter_mut() {
         animation_state.timer.tick(time.delta_seconds);
 

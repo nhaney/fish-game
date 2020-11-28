@@ -66,7 +66,7 @@ impl Plugin for PlayerPlugin {
 
 const PLAYER_WIDTH: f32 = 32.0;
 const PLAYER_HEIGHT: f32 = 32.0;
-const PLAYER_MAX_BOOSTS: u8 = 1;
+const PLAYER_MAX_BOOSTS: u8 = 3;
 
 fn init_player(
     mut commands: &mut Commands,

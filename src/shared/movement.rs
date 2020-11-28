@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use super::game::{GameState, GameStates};
+
 pub struct Velocity(pub Vec3);
 
 pub struct SideScrollDirection(pub bool);
@@ -14,7 +16,15 @@ impl SideScrollDirection {
     }
 }
 
-pub fn movement_system(time: Res<Time>, mut query: Query<(&Velocity, &mut Transform)>) {
+pub fn movement_system(
+    time: Res<Time>,
+    game_state: Res<GameState>,
+    mut query: Query<(&Velocity, &mut Transform)>,
+) {
+    if let GameStates::Paused = game_state.cur_state {
+        return;
+    }
+
     for (velocity, mut transform) in query.iter_mut() {
         transform.translation.x += time.delta_seconds * velocity.0.x;
         transform.translation.y += time.delta_seconds * velocity.0.y;

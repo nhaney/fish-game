@@ -34,6 +34,7 @@ impl Plugin for SharedPlugin {
             })
             .add_event::<game::GameOver>()
             .add_event::<game::GamePaused>()
+            .add_event::<game::GameUnpaused>()
             .add_event::<game::GameRestarted>()
             .add_system(game::difficulty_scaling_system)
             .add_system_to_stage(stage::LAST, game::increment_score_system)
@@ -45,6 +46,8 @@ impl Plugin for SharedPlugin {
             .add_system_to_stage(stage::LAST, game::reset_difficulty_on_restart)
             .add_system_to_stage(stage::LAST, game::reset_game_state_on_restart)
             .add_system_to_stage(stage::LAST, game::reset_score_on_restart)
+            .add_system_to_stage(stage::LAST, game::pause_game)
+            .add_system_to_stage(stage::LAST, game::unpause_game)
             .add_system_to_stage(stages::CALCULATE_VELOCITY, game::restart_game);
 
         // if cfg!(debug_assertions) {

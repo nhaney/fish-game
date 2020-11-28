@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use std::collections::HashSet;
 
 use super::events::{PlayerAte, PlayerStarved};
-use crate::shared::game::{GameState, GameStates};
+use crate::shared::game::GameState;
 
 #[derive(Debug)]
 pub(crate) struct PlayerStats {
@@ -75,7 +75,7 @@ pub(super) fn hunger_countdown_system(
     mut starved_events: ResMut<Events<PlayerStarved>>,
     mut query: Query<(&mut HungerCountdown, Entity)>,
 ) {
-    if let GameStates::GameOver = game_state.cur_state {
+    if !game_state.is_running() {
         return;
     }
 

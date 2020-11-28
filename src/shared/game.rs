@@ -6,7 +6,7 @@ use crate::player::events::{PlayerAte, PlayerBonked, PlayerHooked, PlayerStarved
 #[derive(Debug, Copy, Clone)]
 pub enum GameStates {
     Running,
-    // Paused,
+    Paused,
     GameOver,
 }
 
@@ -23,6 +23,13 @@ impl GameState {
             "Game state transitioned from {:?} to {:?}",
             self.prev_state, self.cur_state
         );
+    }
+
+    pub fn is_running(&self) -> bool {
+        if let GameStates::Running = self.cur_state {
+            return true;
+        }
+        false
     }
 }
 
@@ -41,6 +48,8 @@ pub struct GameOver {
 }
 
 pub struct GamePaused;
+pub struct GameUnpaused;
+
 pub struct GameRestarted;
 
 const MAX_DIFFICULTY: u8 = 4;
@@ -56,7 +65,15 @@ pub struct Difficulty {
     pub(super) timer: Timer,
 }
 
-pub(super) fn difficulty_scaling_system(time: Res<Time>, mut difficulty: ResMut<Difficulty>) {
+pub(super) fn difficulty_scaling_system(
+    time: Res<Time>,
+    game_state: Res<GameState>,
+    mut difficulty: ResMut<Difficulty>,
+) {
+    if !game_state.is_running() {
+        return;
+    }
+
     difficulty.timer.tick(time.delta_seconds);
 
     if difficulty.timer.finished && difficulty.multiplier < MAX_DIFFICULTY {
@@ -71,7 +88,7 @@ pub(super) fn increment_score_system(
     mut player_ate_reader: Local<EventReader<PlayerAte>>,
     player_ate_events: Res<Events<PlayerAte>>,
 ) {
-    if let GameStates::GameOver = game_state.cur_state {
+    if !game_state.is_running() {
         return;
     }
 
@@ -166,5 +183,26 @@ pub(super) fn reset_game_state_on_restart(
         println!("Resetting game state after restart");
         game_state.cur_state = GameStates::Running;
         game_state.prev_state = GameStates::Running;
+    }
+}
+
+pub(super) fn pause_game(
+    mut game_state: ResMut<GameState>,
+    pause_events: Res<Events<GamePaused>>,
+    mut pause_reader: Local<EventReader<GamePaused>>,
+) {
+    if let Some(_) = pause_reader.earliest(&pause_events) {
+        game_state.transition(GameStates::Paused);
+    }
+}
+
+pub(super) fn unpause_game(
+    mut game_state: ResMut<GameState>,
+    unpause_events: Res<Events<GameUnpaused>>,
+    mut unpause_reader: Local<EventReader<GameUnpaused>>,
+) {
+    if let Some(_) = unpause_reader.earliest(&unpause_events) {
+        let prev_state = game_state.prev_state;
+        game_state.transition(prev_state);
     }
 }

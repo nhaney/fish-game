@@ -3,7 +3,10 @@ use std::collections::HashSet;
 
 use super::attributes::{BoostSupply, Player, PlayerStats};
 use super::movement::move_player_from_input;
-use crate::shared::movement::{SideScrollDirection, Velocity};
+use crate::shared::{
+    game::GameState,
+    movement::{SideScrollDirection, Velocity},
+};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub(super) enum PlayerStates {
@@ -148,6 +151,7 @@ pub(super) struct BoostCooldown {
 /// Moves the player when they are not in the Boost state
 pub(super) fn swim_movement_system(
     mut commands: &mut Commands,
+    game_state: Res<GameState>,
     keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<(
         &Player,
@@ -158,6 +162,10 @@ pub(super) fn swim_movement_system(
         &mut BoostSupply,
     )>,
 ) {
+    if !game_state.is_running() {
+        return;
+    }
+
     for (player, mut velocity, mut facing, entity, mut state, mut boost_supply) in query.iter_mut()
     {
         if state.current_state != PlayerStates::Idle && state.current_state != PlayerStates::Swim {
@@ -188,8 +196,13 @@ pub(super) fn swim_movement_system(
 pub(super) fn boost_movement_system(
     commands: &mut Commands,
     time: Res<Time>,
+    game_state: Res<GameState>,
     mut query: Query<(&mut BoostData, &mut PlayerState, &mut Velocity, Entity)>,
 ) {
+    if !game_state.is_running() {
+        return;
+    }
+
     for (mut boost_data, mut player_state, mut velocity, entity) in query.iter_mut() {
         if player_state.current_state != PlayerStates::Boost {
             continue;
@@ -220,8 +233,13 @@ pub(super) fn boost_cooldown_system(
     commands: &mut Commands,
     time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
+    game_state: Res<GameState>,
     mut query: Query<(&mut BoostCooldown, &mut PlayerState, Entity)>,
 ) {
+    if !game_state.is_running() {
+        return;
+    }
+
     for (mut boost_cooldown, mut player_state, entity) in query.iter_mut() {
         boost_cooldown.timer.tick(time.delta_seconds);
 

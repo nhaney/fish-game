@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 
 use super::attributes::{Player, Sink};
-use crate::shared::movement::{SideScrollDirection, Velocity};
+use crate::shared::{
+    game::GameState,
+    movement::{SideScrollDirection, Velocity},
+};
 
 /**
 Reads keyboard input and adjusts players velocity based on it. Returns
@@ -52,7 +55,11 @@ pub(super) fn move_player_from_input(
 }
 
 /// sinks the player based on their weight
-pub(super) fn sink_system(mut query: Query<(&mut Velocity, &Sink)>) {
+pub(super) fn sink_system(game_state: Res<GameState>, mut query: Query<(&mut Velocity, &Sink)>) {
+    if !game_state.is_running() {
+        return;
+    }
+
     for (mut velocity, sink) in query.iter_mut() {
         velocity.0.y -= sink.weight;
     }

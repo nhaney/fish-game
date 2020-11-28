@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::shared::game::{GamePaused, GameRestarted, GameUnpaused};
+
 #[derive(Debug, Clone)]
 pub(super) struct PauseButtonMaterials {
     pause: Handle<ColorMaterial>,
@@ -27,6 +29,8 @@ impl FromResources for PauseButtonMaterials {
 
 pub(super) fn pause_button_system(
     pause_button_materials: Res<PauseButtonMaterials>,
+    mut game_paused_events: ResMut<Events<GamePaused>>,
+    mut game_unpaused_events: ResMut<Events<GameUnpaused>>,
     mut interaction_query: Query<
         (&Interaction, &mut Handle<ColorMaterial>, &mut PauseButton),
         Mutated<Interaction>,
@@ -36,8 +40,10 @@ pub(super) fn pause_button_system(
         if let Interaction::Clicked = *interaction {
             if pause_button.is_paused {
                 *material = pause_button_materials.pause.clone().into();
+                game_unpaused_events.send(GameUnpaused);
             } else {
                 *material = pause_button_materials.play.clone().into();
+                game_paused_events.send(GamePaused);
             }
 
             pause_button.is_paused = !pause_button.is_paused;
@@ -77,4 +83,18 @@ pub(super) fn add_pause_button(
                 })
                 .with(PauseButton { is_paused: false });
         });
+}
+
+pub(super) fn reset_pause_button_on_restart(
+    restart_events: Res<Events<GameRestarted>>,
+    mut restart_reader: Local<EventReader<GameRestarted>>,
+    pause_button_materials: Res<PauseButtonMaterials>,
+    mut pause_button_query: Query<(&mut Handle<ColorMaterial>, &mut PauseButton)>,
+) {
+    if let Some(_) = restart_reader.earliest(&restart_events) {
+        for (mut material, mut pause_button) in pause_button_query.iter_mut() {
+            *material = pause_button_materials.pause.clone().into();
+            pause_button.is_paused = false;
+        }
+    }
 }
