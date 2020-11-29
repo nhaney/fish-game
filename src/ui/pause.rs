@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::shared::game::{GamePaused, GameRestarted, GameUnpaused};
+use crate::shared::game::{GamePaused, GameRestarted, GameState, GameStates, GameUnpaused};
 
 #[derive(Debug, Clone)]
 pub(super) struct PauseButtonMaterials {
@@ -28,6 +28,7 @@ impl FromResources for PauseButtonMaterials {
 }
 
 pub(super) fn pause_button_system(
+    game_state: Res<GameState>,
     pause_button_materials: Res<PauseButtonMaterials>,
     mut game_paused_events: ResMut<Events<GamePaused>>,
     mut game_unpaused_events: ResMut<Events<GameUnpaused>>,
@@ -36,6 +37,10 @@ pub(super) fn pause_button_system(
         Mutated<Interaction>,
     >,
 ) {
+    if let GameStates::GameOver = game_state.cur_state {
+        return;
+    }
+
     for (interaction, mut material, mut pause_button) in interaction_query.iter_mut() {
         if let Interaction::Clicked = *interaction {
             if pause_button.is_paused {

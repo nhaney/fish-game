@@ -210,9 +210,9 @@ pub(super) fn boost_movement_system(
 
         velocity.0 = boost_data.velocity;
 
-        boost_data.timer.tick(time.delta_seconds);
+        boost_data.timer.tick(time.delta_seconds());
 
-        if boost_data.timer.finished {
+        if boost_data.timer.finished() {
             // println!("Boost finished!");
             commands.remove_one::<BoostData>(entity);
             match boost_data.prev_state {
@@ -241,12 +241,12 @@ pub(super) fn boost_cooldown_system(
     }
 
     for (mut boost_cooldown, mut player_state, entity) in query.iter_mut() {
-        boost_cooldown.timer.tick(time.delta_seconds);
+        boost_cooldown.timer.tick(time.delta_seconds());
 
         boost_cooldown.did_release =
             boost_cooldown.did_release || !keyboard_input.pressed(KeyCode::Space);
 
-        if boost_cooldown.timer.finished && boost_cooldown.did_release {
+        if boost_cooldown.timer.finished() && boost_cooldown.did_release {
             // println!("Boost cooldown finished. Boost can be used again.");
             commands.remove_one::<BoostCooldown>(entity);
             player_state

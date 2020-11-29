@@ -11,10 +11,17 @@ impl Plugin for ObjectPlugins {
         app.add_resource(boat::BoatSpawner {
             spawn_timer: Timer::from_seconds(5.0, true),
         })
+        .init_resource::<boat::BoatMaterials>()
         .add_system_to_stage(stage::EVENT, boat::boat_spawner_system)
-        .add_system_to_stage(stages::CORRECT_MOVEMENT, boat::despawn_boat_system)
-        .add_system_to_stage(stage::LAST, boat::boat_exit_system)
-        .add_system_to_stage(stage::LAST, boat::worm_eaten_system)
-        .add_system_to_stage(stage::LAST, boat::reset_boats_on_restart);
+        // collision handlers
+        .add_system_to_stage(stages::HANDLE_EVENTS, boat::player_hooked_handler)
+        .add_system_to_stage(stages::HANDLE_EVENTS, boat::player_bonked_handler)
+        .add_system_to_stage(stages::HANDLE_EVENTS, boat::boat_exit_system)
+        .add_system_to_stage(stages::HANDLE_EVENTS, boat::worm_eaten_system)
+        // collision detection
+        .add_system_to_stage(stages::CALCULATE_COLLISIONS, boat::despawn_boat_system)
+        // final event handlers and presentation
+        .add_system_to_stage(stages::PREPARE_RENDER, boat::redraw_line_when_hook_moves)
+        .add_system_to_stage(stages::PREPARE_RENDER, boat::reset_boats_on_restart);
     }
 }

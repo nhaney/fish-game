@@ -30,27 +30,17 @@
 - [ ]  Power-ups (Invincibility, life vest)
 
 
-## Goal List 11/21/20
-- [x] Boat collision
-- [x] Game state and scoring modeled
-  * Game state fsm?
-- [ ] Event handlers for hook collision
-  * ~~Boat exits~~
-  * Hook reel start
-  * Player state changes
-- [ ] Event handlers for worm collision
-  * ~~Worm despawn~~
-  * Audio?
-- [ ] Worm animation
-- [ ] Boat animation
-- [x] Player starvation timer
-- [x] Player boost controller
-- [ ] UI
-  * Score display
-    * Changes color when at highest score
-  * Pause/Start button
-  * Game over messages
-  * Player starve timer/boosts
-- [ ] Restart game
-- [ ] Record high scores
+## Goal List 11/28/20
+- [ ] Hooked animation
+- [ ] Bonked animation
+- [ ] Starved animation
+**BREAK**
+- [ ] Fix (0,0) child spawn bug
+- [ ] Make boost trackers not rotate with player
+**BREAK**
 - [ ] WASM target
+**BREAK**
+- [ ] Record high scores - file for native, local storage for browser
+**BREAK**
+- [ ] Clean up code/warnings
+

@@ -41,11 +41,11 @@ fn create_player_animations(
                 frames: vec![
                     AnimationFrame {
                         atlas_index: texture_atlas.get_texture_index(&swim_1_handle).unwrap(),
-                        time: 0.3,
+                        time: 0.2,
                     },
                     AnimationFrame {
                         atlas_index: texture_atlas.get_texture_index(&swim_2_handle).unwrap(),
-                        time: 0.3,
+                        time: 0.2,
                     },
                 ],
             },
@@ -174,7 +174,9 @@ pub(super) fn player_state_animation_change_system(
 
                 let next_animation = player_state_animations.map.get(&cur_player_state).unwrap();
 
-                animation_state.timer.duration = next_animation.frames[0].time;
+                animation_state
+                    .timer
+                    .set_duration(next_animation.frames[0].time);
                 animation_state.timer.reset();
                 // TODO: Find out how to remove this clone
                 animation_state.animation = next_animation.clone();

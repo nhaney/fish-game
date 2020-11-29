@@ -2,12 +2,15 @@ use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
 use std::collections::HashMap;
 
-use crate::player::events::PlayerAte;
+use crate::player::{
+    attributes::Player,
+    events::{PlayerAte, PlayerBonked, PlayerHooked},
+};
 use crate::shared::{
     arena::Arena,
     collision::Collider,
-    game::{Difficulty, GameOver, GameRestarted, GameState, GameStates},
-    movement::{SideScrollDirection, Velocity},
+    game::{Difficulty, GameOver, GameRestarted, GameState},
+    movement::{Destination, SideScrollDirection, Velocity},
     rng::GameRng,
 };
 
@@ -30,6 +33,27 @@ struct BoatStats {
     height: f32,
     worm_chance: f32,
     boat_type: BoatTypes,
+}
+
+pub(super) struct BoatMaterials {
+    boat: Handle<ColorMaterial>,
+    line: Handle<ColorMaterial>,
+    worm: Handle<ColorMaterial>,
+    hook: Handle<ColorMaterial>,
+}
+
+impl FromResources for BoatMaterials {
+    fn from_resources(resources: &Resources) -> Self {
+        let asset_server = resources.get::<AssetServer>().unwrap();
+        let mut materials = resources.get_mut::<Assets<ColorMaterial>>().unwrap();
+
+        BoatMaterials {
+            boat: materials.add(asset_server.load("sprites/boat/boat.png").into()),
+            line: materials.add(Color::BLACK.into()),
+            worm: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+            hook: materials.add(Color::rgb(0.5, 0.5, 0.5).into()),
+        }
+    }
 }
 
 fn boat_stats_factory(difficulty: u8, rng: &mut ChaCha8Rng) -> BoatStats {
@@ -79,9 +103,18 @@ fn boat_stats_factory(difficulty: u8, rng: &mut ChaCha8Rng) -> BoatStats {
 
 pub struct Boat;
 
-pub struct Worm;
+pub struct Worm {
+    line_entity: Entity,
+}
 
-pub struct Hook;
+pub struct Hook {
+    line_entity: Entity,
+}
+
+pub struct Line {
+    start_point: Vec3,
+    end_point: Vec3,
+}
 
 pub(super) struct BoatSpawner {
     pub spawn_timer: Timer,
@@ -93,29 +126,27 @@ pub(super) fn boat_spawner_system(
     arena: Res<Arena>,
     game_state: Res<GameState>,
     difficulty: Res<Difficulty>,
-    asset_server: Res<AssetServer>,
+    boat_materials: Res<BoatMaterials>,
     mut rng: ResMut<GameRng>,
     mut boat_spawner: ResMut<BoatSpawner>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     if !game_state.is_running() {
         return;
     }
 
-    boat_spawner.spawn_timer.tick(time.delta_seconds);
+    boat_spawner.spawn_timer.tick(time.delta_seconds());
 
-    if boat_spawner.spawn_timer.finished {
+    if boat_spawner.spawn_timer.finished() {
         for _ in 0..rng.rng.gen_range(1, difficulty.multiplier + 1) {
             let stats = boat_stats_factory(difficulty.multiplier, &mut rng.rng);
             spawn_boat(
                 stats,
                 &mut commands,
-                &mut materials,
+                &boat_materials,
                 &mut meshes,
                 &arena,
                 &mut rng.rng,
-                &asset_server,
             );
         }
     }
@@ -124,11 +155,10 @@ pub(super) fn boat_spawner_system(
 fn spawn_boat(
     stats: BoatStats,
     commands: &mut Commands,
-    materials: &mut Assets<ColorMaterial>,
+    boat_materials: &BoatMaterials,
     meshes: &mut ResMut<Assets<Mesh>>,
     arena: &Arena,
     rng: &mut ChaCha8Rng,
-    asset_server: &AssetServer,
 ) {
     let facing_right: bool = rng.gen();
 
@@ -142,6 +172,11 @@ fn spawn_boat(
         0.0,
     );
 
+    let boat_start_rotation = match facing_right {
+        true => Quat::from_rotation_y(0.0),
+        false => Quat::from_rotation_y(std::f32::consts::PI),
+    };
+
     let velocity = Vec3::new(
         match facing_right {
             // going from the right to the left
@@ -154,7 +189,7 @@ fn spawn_boat(
     );
 
     // let boat_material = materials.add(Color::rgb(rng.gen(), rng.gen(), rng.gen()).into());
-    let boat_material = materials.add(asset_server.load("sprites/boat/boat.png").into());
+    let boat_material = boat_materials.boat.clone();
 
     // spawn boat
     commands
@@ -173,11 +208,15 @@ fn spawn_boat(
                 size: Vec2::new(stats.width, stats.height),
                 ..Default::default()
             },
-            transform: Transform::from_translation(boat_start_pos),
+            transform: Transform {
+                translation: boat_start_pos,
+                rotation: boat_start_rotation,
+                ..Default::default()
+            },
             ..Default::default()
         })
         .with_children(|parent| {
-            spawn_lines(&stats, rng, parent, materials, meshes);
+            spawn_lines(&stats, rng, parent, boat_materials, meshes);
         });
 }
 
@@ -190,15 +229,15 @@ fn spawn_lines(
     boat_stats: &BoatStats,
     rng: &mut ChaCha8Rng,
     parent: &mut ChildBuilder,
-    materials: &mut Assets<ColorMaterial>,
+    boat_materials: &BoatMaterials,
     meshes: &mut ResMut<Assets<Mesh>>,
 ) {
     // all poles start above the top of the boat at the same y position
     let start_y = (boat_stats.height / 2.0) + POLE_HEIGHT;
 
-    let line_material = materials.add(Color::rgb(1.0, 0.0, 0.0).into());
-    let hook_material = materials.add(Color::rgb(0.5, 0.5, 0.5).into());
-    let worm_material = materials.add(Color::rgb(1.0, 0.0, 0.0).into());
+    let line_material = boat_materials.line.clone();
+    let hook_material = boat_materials.hook.clone();
+    let worm_material = boat_materials.worm.clone();
 
     for i in 1..boat_stats.num_poles + 1 {
         let x_offset = i as f32 * (boat_stats.width / (boat_stats.num_poles + 1) as f32);
@@ -222,10 +261,37 @@ fn spawn_lines(
             0.0,
         );
 
+        // spawn the line that connects the start and end points
+        let mut builder = PathBuilder::new();
+        builder.move_to(point(start_point.x, start_point.y));
+        builder.line_to(point(end_point.x, end_point.y));
+        builder.close();
+
+        let line = builder.build();
+
+        let line_entity = parent
+            .spawn(
+                line.stroke(
+                    line_material.clone(),
+                    meshes,
+                    Vec3::new(0.0, 0.0, 0.0),
+                    &StrokeOptions::default()
+                        .with_line_width(FISHING_LINE_WIDTH)
+                        .with_line_cap(LineCap::Round)
+                        .with_line_join(LineJoin::Round),
+                ),
+            )
+            .with(Line {
+                start_point,
+                end_point,
+            })
+            .current_entity()
+            .unwrap();
+
         // spawn the hook at the end point of the line
         parent
             .spawn((
-                Hook,
+                Hook { line_entity },
                 Collider {
                     width: HOOK_SIZE,
                     height: HOOK_SIZE,
@@ -250,7 +316,7 @@ fn spawn_lines(
 
             parent
                 .spawn((
-                    Worm,
+                    Worm { line_entity },
                     Collider {
                         width: WORM_SIZE,
                         height: WORM_SIZE,
@@ -266,26 +332,6 @@ fn spawn_lines(
                     ..Default::default()
                 });
         }
-
-        // spawn the line between the start and end points
-        let mut builder = PathBuilder::new();
-        builder.move_to(point(start_point.x, start_point.y));
-        builder.line_to(point(end_point.x, end_point.y));
-        builder.close();
-
-        let line = builder.build();
-
-        parent.spawn(
-            line.stroke(
-                line_material.clone(),
-                meshes,
-                Vec3::new(0.0, 0.0, 0.0),
-                &StrokeOptions::default()
-                    .with_line_width(FISHING_LINE_WIDTH)
-                    .with_line_cap(LineCap::Round)
-                    .with_line_join(LineJoin::Round),
-            ),
-        );
     }
 }
 
@@ -404,5 +450,121 @@ pub(super) fn reset_boats_on_restart(
         }
         // reset spawner
         boat_spawner.spawn_timer = Timer::from_seconds(5.0, true);
+    }
+}
+
+/**
+    1. Attach player as a child entity of the hook and remove the player's velocity
+    2. Give the hook a velocity and destination
+*/
+pub(super) fn player_hooked_handler(
+    commands: &mut Commands,
+    mut player_hooked_reader: Local<EventReader<PlayerHooked>>,
+    player_hooked_events: Res<Events<PlayerHooked>>,
+    hook_query: Query<(&Hook, &Transform), With<Hook>>,
+    line_query: Query<&Line>,
+    mut player_query: Query<(&mut Transform, &mut Velocity), (With<Player>, Without<Hook>)>,
+) {
+    for player_hooked_event in player_hooked_reader.iter(&player_hooked_events) {
+        let player_entity = player_hooked_event.player_entity;
+        let hook_entity = player_hooked_event.hook_entity;
+
+        // Set the players velocity to zero, move it to the position of the hook, and make it a child of
+        // the hook.
+        let (mut player_transform, mut player_velocity) =
+            player_query.get_mut(player_entity).unwrap();
+        player_transform.translation = Vec3::zero();
+        player_velocity.0 = Vec3::zero();
+
+        // TODO: Make player look at hooked point
+        commands.push_children(
+            player_hooked_event.hook_entity,
+            &[player_hooked_event.player_entity],
+        );
+
+        let (hook, hook_transform) = hook_query.get(hook_entity).unwrap();
+        let line_entity = hook.line_entity;
+        let line_start = line_query.get(line_entity).unwrap().start_point;
+        let reel_velocity = (line_start - hook_transform.translation).normalize() * 200.0;
+
+        commands.insert(
+            hook_entity,
+            (
+                Destination {
+                    point: line_start,
+                    trigger_distance: 10.0,
+                },
+                Velocity(reel_velocity),
+            ),
+        );
+    }
+}
+
+// When a hook changes position, redraw the line that the hook is on
+pub(super) fn redraw_line_when_hook_moves(
+    commands: &mut Commands,
+    boat_materials: Res<BoatMaterials>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    hook_query: Query<(&Hook, &Transform), Changed<Transform>>,
+    mut line_query: Query<&mut Line>,
+) {
+    for (hook_info, changed_transform) in hook_query.iter() {
+        println!("Hook changed!");
+        let line_entity = hook_info.line_entity;
+
+        let mut line = line_query.get_mut(line_entity).unwrap();
+        line.end_point = changed_transform.translation;
+
+        let mut builder = PathBuilder::new();
+        builder.move_to(point(line.start_point.x, line.start_point.y));
+        builder.line_to(point(line.end_point.x, line.end_point.y));
+        builder.close();
+
+        let line = builder.build();
+
+        commands.insert(
+            line_entity,
+            line.stroke(
+                boat_materials.line.clone(),
+                &mut meshes,
+                Vec3::new(0.0, 0.0, 0.0),
+                &StrokeOptions::default()
+                    .with_line_width(FISHING_LINE_WIDTH)
+                    .with_line_cap(LineCap::Round)
+                    .with_line_join(LineJoin::Round),
+            ),
+        );
+    }
+}
+
+pub(super) fn player_bonked_handler(
+    commands: &mut Commands,
+    mut player_bonked_reader: Local<EventReader<PlayerBonked>>,
+    player_bonked_events: Res<Events<PlayerBonked>>,
+    boat_query: Query<(&Collider, &Transform), With<Boat>>,
+    mut player_query: Query<(&Transform, &mut Velocity), With<Player>>,
+) {
+    for player_bonked_event in player_bonked_reader.iter(&player_bonked_events) {
+        let player_entity = player_bonked_event.player_entity;
+        let boat_entity = player_bonked_event.boat_entity;
+
+        let (boat_collider, boat_transform) = boat_query.get(boat_entity).unwrap();
+        let (player_transform, mut player_velocity) = player_query.get_mut(player_entity).unwrap();
+
+        let target_point = Vec3::new(
+            player_transform.translation.x,
+            boat_transform.translation.y + (boat_collider.height / 2.0),
+            1.0,
+        );
+
+        player_velocity.0 = (target_point - player_transform.translation).normalize() * 50.0;
+
+        commands.insert_one(
+            player_entity,
+            Destination {
+                point: target_point,
+                trigger_distance: 10.0,
+            },
+        );
     }
 }

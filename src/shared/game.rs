@@ -74,9 +74,9 @@ pub(super) fn difficulty_scaling_system(
         return;
     }
 
-    difficulty.timer.tick(time.delta_seconds);
+    difficulty.timer.tick(time.delta_seconds());
 
-    if difficulty.timer.finished && difficulty.multiplier < MAX_DIFFICULTY {
+    if difficulty.timer.finished() && difficulty.multiplier < MAX_DIFFICULTY {
         difficulty.multiplier += 1;
     }
 }
@@ -92,9 +92,9 @@ pub(super) fn increment_score_system(
         return;
     }
 
-    score.timer.tick(time.delta_seconds);
+    score.timer.tick(time.delta_seconds());
 
-    if score.timer.finished {
+    if score.timer.finished() {
         score.count += 1;
         println!("Score: {:?}", score.count);
     }

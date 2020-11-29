@@ -94,7 +94,7 @@ pub(super) fn hunger_countdown_system(
             hunger_countdown.time_left += hunger_countdown.extra_time_per_worm;
         }
 
-        hunger_countdown.time_left -= time.delta_seconds;
+        hunger_countdown.time_left -= time.delta_seconds();
 
         if hunger_countdown.time_left < 0.0 {
             // emit starved event for entity

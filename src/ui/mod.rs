@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::shared::stages;
+
 mod game_over;
 mod pause;
 mod player;
@@ -10,21 +12,27 @@ pub struct UIPlugin;
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut AppBuilder) {
         println!("Building UI plugin...");
-        app.add_startup_system(setup)
-            // score text
-            .add_system(score::update_score_text)
-            // pause button
-            .init_resource::<pause::PauseButtonMaterials>()
-            .add_system(pause::pause_button_system)
-            // game over text
-            .add_system(game_over::show_game_over_text)
-            // player countdown text
-            // TODO: Clean this up, put it in player plugin?
+        // pause button sprite materials
+        app.init_resource::<pause::PauseButtonMaterials>()
+            // Startup systems - create ui elements
+            .add_startup_system(setup)
             .add_startup_system(player::add_countdown_text)
-            .add_system(player::update_coundown_text_system)
-            .add_system(player::reposition_countdown_text_system)
-            .add_system_to_stage(stage::LAST, game_over::clear_game_over_message_on_restart)
-            .add_system_to_stage(stage::LAST, pause::reset_pause_button_on_restart);
+            // Systems that react to input
+            .add_system_to_stage(stages::HANDLE_EVENTS, pause::pause_button_system)
+            // Systems that update ui based on current state of the game before rendering
+            // Note: These must be in update because UI updates happen before POST_UPDATE
+            .add_system_to_stage(stages::PREPARE_RENDER, score::update_score_text)
+            .add_system_to_stage(stages::PREPARE_RENDER, game_over::show_game_over_text)
+            .add_system_to_stage(stages::PREPARE_RENDER, player::update_coundown_text_system)
+            .add_system_to_stage(
+                stages::PREPARE_RENDER,
+                player::reposition_countdown_text_system,
+            )
+            .add_system_to_stage(
+                stages::PREPARE_RENDER,
+                game_over::clear_game_over_message_on_restart,
+            )
+            .add_system_to_stage(stages::PREPARE_RENDER, pause::reset_pause_button_on_restart);
     }
 }
 

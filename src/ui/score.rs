@@ -45,11 +45,8 @@ pub(super) fn add_score_text(
         });
 }
 
-pub(super) fn update_score_text(
-    score: Res<Score>,
-    mut query: Query<(&mut Text, &ScoreText, &Transform)>,
-) {
-    for (mut text, _, transform) in query.iter_mut() {
+pub(super) fn update_score_text(score: Res<Score>, mut query: Query<&mut Text, With<ScoreText>>) {
+    for mut text in query.iter_mut() {
         text.value = format!("Score: {:?}", score.count);
     }
 }

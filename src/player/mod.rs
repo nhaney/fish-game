@@ -7,6 +7,7 @@ use crate::shared::{
 use bevy::prelude::*;
 use std::collections::HashSet;
 
+mod animations;
 pub(crate) mod attributes;
 mod collision;
 pub(crate) mod events;
@@ -19,48 +20,55 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut AppBuilder) {
         println!("Building player plugin...");
-        app.add_startup_system(init_player)
-            // systems that handle input/movement
-            .add_system_to_stage(stages::CALCULATE_VELOCITY, states::swim_movement_system)
-            .add_system_to_stage(stages::CALCULATE_VELOCITY, states::boost_movement_system)
-            .add_system_to_stage(stages::CALCULATE_VELOCITY, states::boost_cooldown_system)
-            .add_system_to_stage(stages::CALCULATE_VELOCITY, movement::sink_system)
-            // systems that handle collision
-            .add_system_to_stage(stages::CORRECT_MOVEMENT, collision::player_bounds_system)
-            .add_system_to_stage(
-                stages::CORRECT_MOVEMENT,
-                collision::player_hook_collision_system,
-            )
-            .add_system_to_stage(
-                stages::CORRECT_MOVEMENT,
-                collision::player_worm_collision_system,
-            )
-            .add_system_to_stage(
-                stages::CORRECT_MOVEMENT,
-                collision::player_boat_collision_system,
-            )
-            // systems that handle presentation
-            .init_resource::<render::PlayerSpriteHandles>()
+        // Resources for player sprites and animations
+        app.init_resource::<render::PlayerSpriteHandles>()
             .init_resource::<render::PlayerStateAnimations>()
-            .add_startup_system(render::start_atlas_load.system())
-            .add_system(render::load_player_atlas)
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                render::player_state_animation_change_system,
-            )
-            //events
+            // Events that indicate either a player collided with something/died
             .add_event::<events::PlayerHooked>()
             .add_event::<events::PlayerStarved>()
             .add_event::<events::PlayerBonked>()
             .add_event::<events::PlayerAte>()
-            //attributes
-            .add_system_to_stage(stage::LAST, attributes::add_boost_system)
-            .add_system_to_stage(stage::LAST, attributes::hunger_countdown_system)
+            // Startup systems initialize the player and its components
+            .add_startup_system(init_player)
+            .add_startup_system(render::start_atlas_load.system())
+            // Timer systems
+            .add_system_to_stage(stage::EVENT, states::boost_cooldown_system)
+            .add_system_to_stage(stage::EVENT, attributes::hunger_countdown_system)
+            // systems that handle input/velocity calculation
+            // systems that handle collision events
+            .add_system_to_stage(stages::HANDLE_EVENTS, attributes::add_boost_system)
+            .add_system_to_stage(stages::HANDLE_EVENTS, animations::player_starved_handler)
+            .add_system_to_stage(stages::HANDLE_EVENTS, states::swim_movement_system)
+            .add_system_to_stage(stages::MOVEMENT, states::boost_movement_system)
+            .add_system_to_stage(stages::MOVEMENT, movement::sink_system)
+            // This system needs to happen before render, but after final position has
+            // been calculated to prevent stuttering movement
+            .add_stage_before(stages::PREPARE_RENDER, "adjust_position")
+            .add_system_to_stage("adjust_position", collision::player_bounds_system)
+            // systems that calculate collision
             .add_system_to_stage(
-                stage::LAST,
-                render::update_tracker_display_from_boost_supply,
+                stages::CALCULATE_COLLISIONS,
+                collision::player_hook_collision_system,
             )
-            .add_system_to_stage(stage::LAST, reset_player);
+            .add_system_to_stage(
+                stages::CALCULATE_COLLISIONS,
+                collision::player_worm_collision_system,
+            )
+            .add_system_to_stage(
+                stages::CALCULATE_COLLISIONS,
+                collision::player_boat_collision_system,
+            )
+            // systems that handle final events and presentation
+            .add_system_to_stage(stages::HANDLE_EVENTS, reset_player)
+            .add_system_to_stage(stages::PREPARE_RENDER, render::load_player_atlas)
+            .add_system_to_stage(
+                stages::PREPARE_RENDER,
+                render::player_state_animation_change_system,
+            )
+            .add_system_to_stage(
+                stages::PREPARE_RENDER,
+                render::update_tracker_display_from_boost_supply,
+            );
     }
 }
 

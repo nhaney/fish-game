@@ -39,9 +39,9 @@ pub(super) fn animation_system(
     }
 
     for (mut animation_state, mut texture_atlas_sprite) in query.iter_mut() {
-        animation_state.timer.tick(time.delta_seconds);
+        animation_state.timer.tick(time.delta_seconds());
 
-        if animation_state.timer.finished {
+        if animation_state.timer.finished() {
             let cur_animation = &animation_state.animation;
             let cur_frame = animation_state.frame_index;
             let num_frames = cur_animation.frames.len();
@@ -56,7 +56,7 @@ pub(super) fn animation_system(
 
             animation_state.frame_index = next_frame_index;
 
-            animation_state.timer.duration = next_frame.time;
+            animation_state.timer.set_duration(next_frame.time);
             animation_state.timer.reset();
 
             texture_atlas_sprite.index = animation_state.frame_index;
