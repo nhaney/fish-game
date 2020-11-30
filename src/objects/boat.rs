@@ -50,8 +50,8 @@ impl FromResources for BoatMaterials {
         BoatMaterials {
             boat: materials.add(asset_server.load("sprites/boat/boat.png").into()),
             line: materials.add(Color::BLACK.into()),
-            worm: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
-            hook: materials.add(Color::rgb(0.5, 0.5, 0.5).into()),
+            worm: materials.add(asset_server.load("sprites/worm/worm1.png").into()),
+            hook: materials.add(asset_server.load("sprites/hook/hook.png").into()),
         }
     }
 }

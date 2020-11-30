@@ -1,4 +1,5 @@
 use crate::shared::{
+    animation::AnimationState,
     collision::Collider,
     game::GameRestarted,
     movement::{SideScrollDirection, Velocity},
@@ -21,8 +22,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut AppBuilder) {
         println!("Building player plugin...");
         // Resources for player sprites and animations
-        app.init_resource::<render::PlayerSpriteHandles>()
-            .init_resource::<render::PlayerStateAnimations>()
+        app.init_resource::<render::PlayerStateAnimations>()
             // Events that indicate either a player collided with something/died
             .add_event::<events::PlayerHooked>()
             .add_event::<events::PlayerStarved>()
@@ -30,7 +30,6 @@ impl Plugin for PlayerPlugin {
             .add_event::<events::PlayerAte>()
             // Startup systems initialize the player and its components
             .add_startup_system(init_player)
-            .add_startup_system(render::start_atlas_load.system())
             // Timer systems
             .add_system_to_stage(stage::EVENT, states::boost_cooldown_system)
             .add_system_to_stage(stage::EVENT, attributes::hunger_countdown_system)
@@ -60,7 +59,6 @@ impl Plugin for PlayerPlugin {
             )
             // systems that handle final events and presentation
             .add_system_to_stage(stages::HANDLE_EVENTS, reset_player)
-            .add_system_to_stage(stages::PREPARE_RENDER, render::load_player_atlas)
             .add_system_to_stage(
                 stages::PREPARE_RENDER,
                 render::player_state_animation_change_system,
@@ -80,8 +78,9 @@ fn init_player(
     mut commands: &mut Commands,
     materials: ResMut<Assets<ColorMaterial>>,
     meshes: ResMut<Assets<Mesh>>,
+    player_state_animations: Res<render::PlayerStateAnimations>,
 ) {
-    let player_entity = spawn_player_entity(commands);
+    let player_entity = spawn_player_entity(commands, &player_state_animations);
     render::spawn_player_boost_trackers(
         &mut commands,
         materials,
@@ -99,7 +98,7 @@ fn reset_player(
     materials: ResMut<Assets<ColorMaterial>>,
     meshes: ResMut<Assets<Mesh>>,
     restart_events: Res<Events<GameRestarted>>,
-    mut player_sprite_handles: ResMut<render::PlayerSpriteHandles>,
+    player_state_animations: Res<render::PlayerStateAnimations>,
     mut restart_reader: Local<EventReader<GameRestarted>>,
     player_query: Query<Entity, With<attributes::Player>>,
 ) {
@@ -109,11 +108,8 @@ fn reset_player(
         // despawn current player
         commands.despawn_recursive(player_entity);
 
-        // mark that new sprites need to be added to the player
-        player_sprite_handles.atlas_loaded = false;
-
         // spawn a new player with new ui components
-        let new_player = spawn_player_entity(commands);
+        let new_player = spawn_player_entity(commands, &player_state_animations);
         render::spawn_player_boost_trackers(
             &mut commands,
             materials,
@@ -126,7 +122,16 @@ fn reset_player(
     }
 }
 
-fn spawn_player_entity(commands: &mut Commands) -> Entity {
+fn spawn_player_entity(
+    commands: &mut Commands,
+    player_state_animations: &render::PlayerStateAnimations,
+) -> Entity {
+    let player_animation = player_state_animations
+        .map
+        .get(&states::PlayerStates::Idle)
+        .unwrap();
+    let first_animation_frame = player_animation.frames[0].clone();
+
     commands
         .spawn((
             attributes::Player {
@@ -160,6 +165,20 @@ fn spawn_player_entity(commands: &mut Commands) -> Entity {
                 height: PLAYER_HEIGHT,
             },
         ))
+        .with_bundle(SpriteBundle {
+            material: first_animation_frame.material_handle.clone(),
+            sprite: Sprite {
+                size: Vec2::new(PLAYER_WIDTH, PLAYER_HEIGHT),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .with(AnimationState {
+            animation: player_animation.clone(),
+            timer: Timer::from_seconds(first_animation_frame.time, false),
+            frame_index: 0,
+            speed_multiplier: 1.0,
+        })
         .current_entity()
         .unwrap()
 }

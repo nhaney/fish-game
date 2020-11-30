@@ -3,12 +3,11 @@ use bevy::prelude::*;
 use super::game::GameState;
 
 /**
-Represents one frame of animation. The atlas index references the TextureAtlas
-handle on the entity.
+Represents one frame of animation.
 */
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AnimationFrame {
-    pub atlas_index: usize,
+    pub material_handle: Handle<ColorMaterial>,
     pub time: f32,
 }
 
@@ -24,7 +23,7 @@ pub struct Animation {
 pub struct AnimationState {
     pub animation: Animation,
     pub timer: Timer,
-    pub frame_index: u32,
+    pub frame_index: usize,
     pub speed_multiplier: f32,
 }
 
@@ -32,13 +31,13 @@ pub struct AnimationState {
 pub(super) fn animation_system(
     time: Res<Time>,
     game_state: Res<GameState>,
-    mut query: Query<(&mut AnimationState, &mut TextureAtlasSprite)>,
+    mut query: Query<(&mut AnimationState, &mut Handle<ColorMaterial>)>,
 ) {
     if !game_state.is_running() {
         return;
     }
 
-    for (mut animation_state, mut texture_atlas_sprite) in query.iter_mut() {
+    for (mut animation_state, mut material_handle) in query.iter_mut() {
         animation_state.timer.tick(time.delta_seconds());
 
         if animation_state.timer.finished() {
@@ -46,20 +45,20 @@ pub(super) fn animation_system(
             let cur_frame = animation_state.frame_index;
             let num_frames = cur_animation.frames.len();
 
-            if (cur_frame + 1) == num_frames as u32 && !cur_animation.should_loop {
+            if (cur_frame + 1) == num_frames && !cur_animation.should_loop {
                 continue;
             }
 
             let next_frame_index =
-                (animation_state.frame_index + 1) % animation_state.animation.frames.len() as u32;
-            let next_frame = cur_animation.frames[next_frame_index as usize];
+                (animation_state.frame_index + 1) % animation_state.animation.frames.len();
+            let next_frame = cur_animation.frames[next_frame_index].clone();
 
             animation_state.frame_index = next_frame_index;
 
             animation_state.timer.set_duration(next_frame.time);
             animation_state.timer.reset();
 
-            texture_atlas_sprite.index = animation_state.frame_index;
+            *material_handle = next_frame.material_handle.clone();
         }
     }
 }
