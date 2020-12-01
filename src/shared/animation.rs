@@ -27,6 +27,18 @@ pub struct AnimationState {
     pub speed_multiplier: f32,
 }
 
+// TODO: Add a sprite material when this component is added
+impl AnimationState {
+    pub fn from_animation(animation: &Animation) -> Self {
+        AnimationState {
+            animation: animation.clone(),
+            timer: Timer::from_seconds(animation.frames[0].time, false),
+            frame_index: 0,
+            speed_multiplier: 1.0,
+        }
+    }
+}
+
 /// Transitions the animation state if it is time for the next frame
 pub(super) fn animation_system(
     time: Res<Time>,

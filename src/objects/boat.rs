@@ -7,6 +7,7 @@ use crate::player::{
     events::{PlayerAte, PlayerBonked, PlayerHooked},
 };
 use crate::shared::{
+    animation::{Animation, AnimationFrame, AnimationState},
     arena::Arena,
     collision::Collider,
     game::{Difficulty, GameOver, GameRestarted, GameState},
@@ -38,7 +39,7 @@ struct BoatStats {
 pub(super) struct BoatMaterials {
     boat: Handle<ColorMaterial>,
     line: Handle<ColorMaterial>,
-    worm: Handle<ColorMaterial>,
+    worm: Animation,
     hook: Handle<ColorMaterial>,
 }
 
@@ -50,7 +51,21 @@ impl FromResources for BoatMaterials {
         BoatMaterials {
             boat: materials.add(asset_server.load("sprites/boat/boat.png").into()),
             line: materials.add(Color::BLACK.into()),
-            worm: materials.add(asset_server.load("sprites/worm/worm1.png").into()),
+            worm: Animation {
+                should_loop: true,
+                frames: vec![
+                    AnimationFrame {
+                        material_handle: materials
+                            .add(asset_server.load("sprites/worm/worm1.png").into()),
+                        time: 0.5,
+                    },
+                    AnimationFrame {
+                        material_handle: materials
+                            .add(asset_server.load("sprites/worm/worm2.png").into()),
+                        time: 0.5,
+                    },
+                ],
+            },
             hook: materials.add(asset_server.load("sprites/hook/hook.png").into()),
         }
     }
@@ -204,10 +219,7 @@ fn spawn_boat(
         ))
         .with_bundle(SpriteBundle {
             material: boat_material.clone(),
-            sprite: Sprite {
-                size: Vec2::new(stats.width, stats.height),
-                ..Default::default()
-            },
+            sprite: Sprite::new(Vec2::new(stats.width, stats.height)),
             transform: Transform {
                 translation: boat_start_pos,
                 rotation: boat_start_rotation,
@@ -223,7 +235,7 @@ fn spawn_boat(
 const POLE_HEIGHT: f32 = 5.0;
 const FISHING_LINE_WIDTH: f32 = 1.0;
 const HOOK_SIZE: f32 = 16.0;
-const WORM_SIZE: f32 = 10.0;
+const WORM_SIZE: f32 = 16.0;
 
 fn spawn_lines(
     boat_stats: &BoatStats,
@@ -237,7 +249,7 @@ fn spawn_lines(
 
     let line_material = boat_materials.line.clone();
     let hook_material = boat_materials.hook.clone();
-    let worm_material = boat_materials.worm.clone();
+    let worm_animation = boat_materials.worm.clone();
 
     for i in 1..boat_stats.num_poles + 1 {
         let x_offset = i as f32 * (boat_stats.width / (boat_stats.num_poles + 1) as f32);
@@ -289,6 +301,9 @@ fn spawn_lines(
             .unwrap();
 
         // spawn the hook at the end point of the line
+        let mut hook_point = end_point.clone();
+        hook_point.y -= HOOK_SIZE / 2.0;
+
         parent
             .spawn((
                 Hook { line_entity },
@@ -298,12 +313,9 @@ fn spawn_lines(
                 },
             ))
             .with_bundle(SpriteBundle {
-                sprite: Sprite {
-                    size: Vec2::new(HOOK_SIZE, HOOK_SIZE),
-                    ..Default::default()
-                },
+                sprite: Sprite::new(Vec2::new(HOOK_SIZE, HOOK_SIZE)),
                 material: hook_material.clone(),
-                transform: Transform::from_translation(end_point),
+                transform: Transform::from_translation(hook_point),
                 ..Default::default()
             });
 
@@ -314,6 +326,7 @@ fn spawn_lines(
             let worm_pos =
                 mid_point - ((mid_point - end_point).normalize() * worm_distance_from_mid);
 
+            let worm_initial_animation_frame = worm_animation.frames[0].clone();
             parent
                 .spawn((
                     Worm { line_entity },
@@ -321,13 +334,11 @@ fn spawn_lines(
                         width: WORM_SIZE,
                         height: WORM_SIZE,
                     },
+                    AnimationState::from_animation(&worm_animation),
                 ))
                 .with_bundle(SpriteBundle {
-                    sprite: Sprite {
-                        size: Vec2::new(WORM_SIZE, WORM_SIZE),
-                        ..Default::default()
-                    },
-                    material: worm_material.clone(),
+                    sprite: Sprite::new(Vec2::new(WORM_SIZE, WORM_SIZE)),
+                    material: worm_initial_animation_frame.material_handle.clone(),
                     transform: Transform::from_translation(worm_pos),
                     ..Default::default()
                 });
@@ -514,6 +525,9 @@ pub(super) fn redraw_line_when_hook_moves(
 
         let mut line = line_query.get_mut(line_entity).unwrap();
         line.end_point = changed_transform.translation;
+
+        // the line should connect to the top of the hook
+        line.end_point.y += HOOK_SIZE / 2.0;
 
         let mut builder = PathBuilder::new();
         builder.move_to(point(line.start_point.x, line.start_point.y));

@@ -29,18 +29,11 @@
 - [ ]  New obstacles (Birds, sharks, etc)
 - [ ]  Power-ups (Invincibility, life vest)
 
-
-## Goal List 11/28/20
-- [ ] Hooked animation
-- [ ] Bonked animation
-- [ ] Starved animation
-**BREAK**
-- [ ] Fix (0,0) child spawn bug
+## Goal List - week of 11/30
 - [ ] Make boost trackers not rotate with player
-**BREAK**
-- [ ] WASM target
-**BREAK**
 - [ ] Record high scores - file for native, local storage for browser
-**BREAK**
+- [ ] Improve visuals, layer sprites correctly with z values. Make size of boat sprites match collision box
+- [ ] Add audio - might be hard on WASM?
 - [ ] Clean up code/warnings
+- [ ] Build + deploy pipeline/workflow to put WASM build on my site
 

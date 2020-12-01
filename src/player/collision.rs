@@ -15,9 +15,14 @@ use crate::{
 
 /// Keeps player in bounds of arena
 pub(super) fn player_bounds_system(
+    game_state: Res<GameState>,
     arena: Res<Arena>,
     mut query: Query<(&Player, &Collider, &mut Transform)>,
 ) {
+    if let GameStates::GameOver = game_state.cur_state {
+        return;
+    }
+
     for (_, collider, mut transform) in query.iter_mut() {
         let new_pos = &mut transform.translation;
 

@@ -28,10 +28,16 @@ pub struct NonRotatingChild;
   TODO: MAKE THIS WORK
 */
 pub(super) fn readjust_rotation(
-    mut query: Query<(&mut GlobalTransform, &Transform), With<NonRotatingChild>>,
+    mut query: Query<(&GlobalTransform, &mut Transform), With<NonRotatingChild>>,
 ) {
-    for (mut global_transform, transform) in query.iter_mut() {
-        // println!("Rotation of boost tracker: {:?}", transform.rotation);
-        global_transform.rotation = Quat::identity();
+    for (global_transform, mut transform) in query.iter_mut() {
+        println!("Rotation of boost tracker: {:?}", transform.rotation);
+        let inverse = global_transform.rotation.conjugate();
+        transform.rotation = inverse * Quat::identity();
+        println!("Rotation of boost tracker after: {:?}", transform.rotation);
+        println!(
+            "Global rotation of boost tracker: {:?}",
+            global_transform.rotation
+        );
     }
 }
