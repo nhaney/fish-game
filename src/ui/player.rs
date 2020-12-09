@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy::render::{camera::Camera, render_graph::base::camera::CAMERA2D};
+use bevy::render::{camera::Camera, render_graph::base::camera::CAMERA_2D};
 
 use crate::player::attributes::{HungerCountdown, Player};
 use crate::shared::collision::Collider;
@@ -63,7 +63,7 @@ pub(super) fn reposition_countdown_text_system(
 ) {
     let (_, camera_transform) = camera_query
         .iter()
-        .filter(|(camera, _)| camera.name == Some(CAMERA2D.to_string()))
+        .filter(|(camera, _)| camera.name == Some(CAMERA_2D.to_string()))
         .next()
         .unwrap();
 

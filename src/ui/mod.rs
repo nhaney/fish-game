@@ -43,7 +43,7 @@ fn setup(
     pause_button_materials: Res<pause::PauseButtonMaterials>,
 ) {
     commands
-        .spawn(UiCameraBundle::default())
+        .spawn(CameraUiBundle::default())
         .spawn(NodeBundle {
             style: Style {
                 size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),

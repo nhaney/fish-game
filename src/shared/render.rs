@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::camera::Camera, ui::camera::UI_CAMERA};
+use bevy::{prelude::*, render::camera::Camera, ui::camera::CAMERA_UI};
 
 use super::arena::Arena;
 
@@ -16,7 +16,7 @@ pub(super) fn scale_camera_to_screen_size(
     );
 
     for (camera, mut camera_transform) in query.iter_mut() {
-        if camera.name != Some(UI_CAMERA.to_string()) {
+        if camera.name != Some(CAMERA_UI.to_string()) {
             camera_transform.scale = scale;
         }
     }
@@ -28,16 +28,16 @@ pub struct NonRotatingChild;
   TODO: MAKE THIS WORK
 */
 pub(super) fn readjust_rotation(
-    mut query: Query<(&GlobalTransform, &mut Transform), With<NonRotatingChild>>,
+    mut query: Query<(&mut GlobalTransform, &mut Transform), With<NonRotatingChild>>,
 ) {
     for (global_transform, mut transform) in query.iter_mut() {
-        println!("Rotation of boost tracker: {:?}", transform.rotation);
-        let inverse = global_transform.rotation.conjugate();
-        transform.rotation = inverse * Quat::identity();
-        println!("Rotation of boost tracker after: {:?}", transform.rotation);
-        println!(
-            "Global rotation of boost tracker: {:?}",
-            global_transform.rotation
-        );
+        let difference = Quat::identity() * global_transform.rotation.conjugate();
+        transform.rotation = difference * transform.rotation;
+    }
+}
+
+pub(super) fn print_rot_after_render(mut query: Query<(&GlobalTransform), With<NonRotatingChild>>) {
+    for global_transform in query.iter_mut() {
+        let x = 1;
     }
 }

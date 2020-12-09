@@ -77,7 +77,8 @@ impl Plugin for SharedPlugin {
             .add_system_to_stage(stages::PREPARE_RENDER, game::reset_score_on_restart)
             .add_system_to_stage(stages::PREPARE_RENDER, game::pause_game)
             .add_system_to_stage(stages::PREPARE_RENDER, game::unpause_game)
-            .add_system_to_stage(stages::PREPARE_RENDER, render::readjust_rotation);
+            .add_system_to_stage(stages::PREPARE_RENDER, render::readjust_rotation)
+            .add_system_to_stage("post_render", render::print_rot_after_render);
 
         // if cfg!(debug_assertions) {
         //     println!("Adding diagnostic plugins for debug mode...");
