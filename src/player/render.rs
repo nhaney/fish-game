@@ -192,17 +192,18 @@ pub(super) struct BoostTrackerDisplay {
 // frame
 pub(super) fn update_tracker_display_from_boost_supply(
     player_query: Query<(&BoostSupply, &BoostTrackerDisplay)>,
-    mut tracker_query: Query<(&mut Draw, &GlobalTransform), With<BoostTracker>>,
+    mut tracker_query: Query<(&mut Visible, &GlobalTransform), With<BoostTracker>>,
 ) {
     for (boost_supply, boost_tracker_display) in player_query.iter() {
         for i in 0..boost_supply.max_boosts {
             let tracker_entity = boost_tracker_display.trackers[i as usize];
-            let (mut tracker_draw, transform) = tracker_query.get_mut(tracker_entity).unwrap();
+            let (mut tracker_visibility, transform) =
+                tracker_query.get_mut(tracker_entity).unwrap();
 
             if (i + 1) <= boost_supply.count {
-                tracker_draw.is_visible = true;
+                tracker_visibility.is_visible = true;
             } else {
-                tracker_draw.is_visible = false;
+                tracker_visibility.is_visible = false;
             }
         }
     }

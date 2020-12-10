@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "native")]
 use std::{
     fs::OpenOptions,
     io::{Read, Write},
@@ -19,11 +20,12 @@ use crate::shared::{
 pub struct LocalScores {
     scores: Vec<u32>,
     // in case the filename is changed or something
-    #[serde(skip_serializing)]
+    #[serde(skip)]
     lookup: String,
 }
 
 impl LocalScores {
+    #[cfg(feature = "native")]
     pub fn new(key: &str) -> Self {
         let filename = key.to_owned() + ".json";
         println!("Filename: {:?}", filename);
@@ -39,26 +41,7 @@ impl LocalScores {
 
         file.read_to_string(&mut contents).unwrap();
 
-        if let Ok(loaded_scores) = serde_json::from_str::<LocalScores>(&contents) {
-            println!("Found existing scores in file");
-            let mut existing_scores = loaded_scores.scores;
-            existing_scores.sort();
-            existing_scores.reverse();
-
-            Self {
-                scores: existing_scores,
-                lookup: filename.to_string(),
-            }
-        } else {
-            println!(
-                "Could not load file {:?} with valid existing scores, creating a new one",
-                filename
-            );
-            Self {
-                scores: Vec::<u32>::new(),
-                lookup: filename.to_string(),
-            }
-        }
+        Self::load_scores_from_json(&contents, &filename)
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -66,12 +49,41 @@ impl LocalScores {
         let window = web_sys::window().unwrap();
 
         if let Ok(Some(local_storage)) = window.local_storage() {
-            if let Ok(Some(value)) = local_storage.get_item(&self.name) {
+            if let Ok(Some(value)) = local_storage.get_item(key) {
+                Self::load_scores_from_json(&value, key)
             } else {
+                println!("Key {:?} not found in local storage", key);
+                Self::load_scores_from_json("", key)
+            }
+        } else {
+            panic!("Could not get local storage")
+        }
+    }
+
+    fn load_scores_from_json(scores_json: &str, lookup: &str) -> Self {
+        if let Ok(loaded_scores) = serde_json::from_str::<LocalScores>(&scores_json) {
+            println!("Found existing scores in file");
+            let mut existing_scores = loaded_scores.scores;
+            existing_scores.sort();
+            existing_scores.reverse();
+
+            Self {
+                scores: existing_scores,
+                lookup: lookup.to_string(),
+            }
+        } else {
+            println!(
+                "Could not load json {:?} with valid existing scores, creating a new one",
+                scores_json
+            );
+            Self {
+                scores: Vec::<u32>::new(),
+                lookup: lookup.to_string(),
             }
         }
     }
 
+    #[cfg(feature = "native")]
     fn save_scores(&mut self) {
         let mut file = OpenOptions::new()
             .create(true)
@@ -79,13 +91,29 @@ impl LocalScores {
             .open(self.lookup.clone())
             .unwrap();
 
-        let serialized_scores = serde_json::to_string(self).unwrap();
+        let serialized_scores = serde_json::to_string_pretty::<Self>(&self).unwrap();
         println!("Writing {:?} to file {:?}", serialized_scores, self.lookup);
         file.write_all(serialized_scores.as_bytes()).unwrap();
     }
 
-    pub fn get_top_ten_local_scores(&mut self) -> &[u32] {
-        &self.scores.as_slice()[0..11]
+    #[cfg(target_arch = "wasm32")]
+    fn save_scores(&mut self) {
+        let window = web_sys::window().unwrap();
+
+        if let Ok(Some(local_storage)) = window.local_storage() {
+            let serialized_scores = serde_json::to_string_pretty::<Self>(&self).unwrap();
+            if let Ok(_) = local_storage.set_item(&self.lookup, &serialized_scores) {
+                println!("Updated scores in local storage to {:?}", serialized_scores);
+            } else {
+                panic!("Could not save in local storage")
+            }
+        } else {
+            panic!("Could not get local storage")
+        }
+    }
+
+    pub fn get_top_ten(&self) -> &[u32] {
+        &self.scores.as_slice()
     }
 
     pub fn add_new_score(&mut self, score: u32) {

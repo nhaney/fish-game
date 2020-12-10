@@ -41,3 +41,14 @@ pub(super) fn print_rot_after_render(mut query: Query<(&GlobalTransform), With<N
         let x = 1;
     }
 }
+
+pub enum RenderLayer {
+    Player,
+    Objects,
+    Background,
+}
+
+/// TODO: Use Vec2's everywhere so this can just be set once when added
+pub(super) fn adjust_to_render_layer(query: Query<(&RenderLayer, &mut Transform)>) {
+    for (render_layer, mut transform) in query.iter_mut() {}
+}

@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use crate::leaderboard::LocalScores;
 use crate::shared::game::Score;
 
 pub(super) struct ScoreText;
@@ -45,8 +46,16 @@ pub(super) fn add_score_text(
         });
 }
 
-pub(super) fn update_score_text(score: Res<Score>, mut query: Query<&mut Text, With<ScoreText>>) {
+pub(super) fn update_score_text(
+    score: Res<Score>,
+    high_scores: Res<LocalScores>,
+    mut query: Query<&mut Text, With<ScoreText>>,
+) {
     for mut text in query.iter_mut() {
-        text.value = format!("Score: {:?}", score.count);
+        text.value = format!(
+            "Score: {:?}, high scores: {:?}",
+            score.count,
+            high_scores.get_top_ten()
+        );
     }
 }

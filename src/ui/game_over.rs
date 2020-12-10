@@ -21,7 +21,7 @@ pub(super) fn add_game_over_text(
                 ..Default::default()
             },
             material: materials.add(Color::NONE.into()),
-            draw: Draw {
+            visible: Visible {
                 is_transparent: true,
                 ..Default::default()
             },
@@ -46,7 +46,7 @@ pub(super) fn add_game_over_text(
                             ..Default::default()
                         },
                     },
-                    draw: Draw {
+                    visible: Visible {
                         is_visible: false,
                         ..Default::default()
                     },
@@ -76,7 +76,7 @@ pub(super) fn add_game_over_text(
                                     ..Default::default()
                                 },
                             },
-                            draw: Draw {
+                            visible: Visible {
                                 is_visible: false,
                                 ..Default::default()
                             },
@@ -94,9 +94,12 @@ pub(super) fn show_game_over_text(
     player_starved_events: Res<Events<PlayerStarved>>,
     mut player_bonked_reader: Local<EventReader<PlayerBonked>>,
     player_bonked_events: Res<Events<PlayerBonked>>,
-    mut game_over_text_query: Query<(&mut Draw, &mut Text), (With<GameOverText>, With<Children>)>,
+    mut game_over_text_query: Query<
+        (&mut Visible, &mut Text),
+        (With<GameOverText>, With<Children>),
+    >,
     mut restart_text_query: Query<
-        &mut Draw,
+        &mut Visible,
         (Without<GameOverText>, With<Parent>, With<RestartText>),
     >,
 ) {
@@ -114,13 +117,13 @@ pub(super) fn show_game_over_text(
     }
 
     if game_over_message != "".to_string() {
-        for (mut game_over_draw, mut game_over_text) in game_over_text_query.iter_mut() {
+        for (mut game_over_visibility, mut game_over_text) in game_over_text_query.iter_mut() {
             game_over_text.value = game_over_message.clone();
-            game_over_draw.is_visible = true;
+            game_over_visibility.is_visible = true;
         }
 
-        for mut restart_text_draw in restart_text_query.iter_mut() {
-            restart_text_draw.is_visible = true;
+        for mut restart_text_visibility in restart_text_query.iter_mut() {
+            restart_text_visibility.is_visible = true;
         }
     }
 }
@@ -128,20 +131,20 @@ pub(super) fn show_game_over_text(
 pub(super) fn clear_game_over_message_on_restart(
     restart_events: Res<Events<GameRestarted>>,
     mut restart_reader: Local<EventReader<GameRestarted>>,
-    mut game_over_text_query: Query<&mut Draw, (With<GameOverText>, With<Children>)>,
+    mut game_over_text_query: Query<&mut Visible, (With<GameOverText>, With<Children>)>,
     mut restart_text_query: Query<
-        &mut Draw,
+        &mut Visible,
         (Without<GameOverText>, With<Parent>, With<RestartText>),
     >,
 ) {
     if let Some(_) = restart_reader.earliest(&restart_events) {
         println!("Clearing game over text after game was restarted.");
-        for mut game_over_draw in game_over_text_query.iter_mut() {
-            game_over_draw.is_visible = false;
+        for mut game_over_visibility in game_over_text_query.iter_mut() {
+            game_over_visibility.is_visible = false;
         }
 
-        for mut restart_text_draw in restart_text_query.iter_mut() {
-            restart_text_draw.is_visible = false;
+        for mut restart_text_visibility in restart_text_query.iter_mut() {
+            restart_text_visibility.is_visible = false;
         }
     }
 }
