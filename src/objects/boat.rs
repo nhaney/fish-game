@@ -337,7 +337,7 @@ fn spawn_lines(
                         width: WORM_SIZE,
                         height: WORM_SIZE,
                     },
-                    AnimationState::from_animation(&worm_animation),
+                    AnimationState::from_animation(&worm_animation, rng.gen::<f32>() * 2.0),
                 ))
                 .with_bundle(SpriteBundle {
                     sprite: Sprite::new(Vec2::new(WORM_SIZE, WORM_SIZE)),

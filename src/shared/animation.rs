@@ -29,12 +29,13 @@ pub struct AnimationState {
 
 // TODO: Add a sprite material when this component is added
 impl AnimationState {
-    pub fn from_animation(animation: &Animation) -> Self {
+    pub fn from_animation(animation: &Animation, speed_multiplier: f32) -> Self {
+        println!("speed multiplier: {:?}", speed_multiplier);
         AnimationState {
             animation: animation.clone(),
             timer: Timer::from_seconds(animation.frames[0].time, false),
             frame_index: 0,
-            speed_multiplier: 1.0,
+            speed_multiplier,
         }
     }
 }
@@ -50,7 +51,10 @@ pub(super) fn animation_system(
     }
 
     for (mut animation_state, mut material_handle) in query.iter_mut() {
-        animation_state.timer.tick(time.delta_seconds());
+        let speed_multiplier = animation_state.speed_multiplier;
+        animation_state
+            .timer
+            .tick(time.delta_seconds() * speed_multiplier);
 
         if animation_state.timer.finished() {
             let cur_animation = &animation_state.animation;
