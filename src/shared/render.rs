@@ -22,26 +22,6 @@ pub(super) fn scale_camera_to_screen_size(
     }
 }
 
-pub struct NonRotatingChild;
-
-/** Rotates the child element so that compared to the parent's rotation it is the
-  TODO: MAKE THIS WORK
-*/
-pub(super) fn readjust_rotation(
-    mut query: Query<(&mut GlobalTransform, &mut Transform), With<NonRotatingChild>>,
-) {
-    for (global_transform, mut transform) in query.iter_mut() {
-        let difference = Quat::identity() * global_transform.rotation.conjugate();
-        transform.rotation = difference * transform.rotation;
-    }
-}
-
-pub(super) fn print_rot_after_render(mut query: Query<(&GlobalTransform), With<NonRotatingChild>>) {
-    for global_transform in query.iter_mut() {
-        let x = 1;
-    }
-}
-
 pub enum RenderLayer {
     Player,
     Objects,
@@ -49,6 +29,12 @@ pub enum RenderLayer {
 }
 
 /// TODO: Use Vec2's everywhere so this can just be set once when added
-pub(super) fn adjust_to_render_layer(query: Query<(&RenderLayer, &mut Transform)>) {
-    for (render_layer, mut transform) in query.iter_mut() {}
+pub(super) fn adjust_to_render_layer(mut query: Query<(&RenderLayer, &mut Transform)>) {
+    for (render_layer, mut transform) in query.iter_mut() {
+        transform.translation.z = match render_layer {
+            RenderLayer::Player => 3.0,
+            RenderLayer::Objects => 2.0,
+            RenderLayer::Background => 1.0,
+        }
+    }
 }

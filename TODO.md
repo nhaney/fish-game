@@ -30,9 +30,9 @@
 - [ ]  Power-ups (Invincibility, life vest)
 
 ## Goal List - week of 11/30
-- [ ] Make boost trackers not rotate with player
-- [ ] Record high scores - file for native, local storage for browser
-- [ ] Improve visuals, layer sprites correctly with z values. Make size of boat sprites match collision box
+- [x] Make boost trackers not rotate with player
+- [x] Record high scores - file for native, local storage for browser
+- [x] Improve visuals, layer sprites correctly with z values. Make size of boat sprites match collision box
 - [ ] Add audio - might be hard on WASM?
 - [ ] Clean up code/warnings
 - [ ] Build + deploy pipeline/workflow to put WASM build on my site

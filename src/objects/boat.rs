@@ -11,7 +11,8 @@ use crate::shared::{
     arena::Arena,
     collision::Collider,
     game::{Difficulty, GameOver, GameRestarted, GameState},
-    movement::{Destination, SideScrollDirection, Velocity},
+    movement::{Destination, Follow, SideScrollDirection, Velocity},
+    render::RenderLayer,
     rng::GameRng,
 };
 
@@ -119,6 +120,7 @@ fn boat_stats_factory(difficulty: u8, rng: &mut ChaCha8Rng) -> BoatStats {
 pub struct Boat;
 
 pub struct Worm {
+    #[allow(dead_code)]
     line_entity: Entity,
 }
 
@@ -216,6 +218,7 @@ fn spawn_boat(
             },
             SideScrollDirection(facing_right),
             Boat,
+            RenderLayer::Objects,
         ))
         .with_bundle(SpriteBundle {
             material: boat_material.clone(),
@@ -431,6 +434,19 @@ pub(super) fn boat_exit_system(
     }
 }
 
+pub(super) fn despawn_worms_on_game_over(
+    commands: &mut Commands,
+    mut game_over_reader: Local<EventReader<GameOver>>,
+    game_over_events: Res<Events<GameOver>>,
+    query: Query<Entity, With<Worm>>,
+) {
+    if let Some(_) = game_over_reader.earliest(&game_over_events) {
+        for worm_entity in query.iter() {
+            commands.despawn_recursive(worm_entity);
+        }
+    }
+}
+
 pub(super) fn worm_eaten_system(
     commands: &mut Commands,
     mut player_ate_reader: Local<EventReader<PlayerAte>>,
@@ -487,16 +503,20 @@ pub(super) fn player_hooked_handler(
         player_transform.translation = Vec3::zero();
         player_velocity.0 = Vec3::zero();
 
-        // TODO: Make player look at hooked point
-        commands.push_children(
-            player_hooked_event.hook_entity,
-            &[player_hooked_event.player_entity],
+        // make player follow hook back
+        commands.insert_one(
+            player_hooked_event.player_entity,
+            Follow {
+                entity_to_follow: player_hooked_event.hook_entity,
+                offset: Vec3::zero(),
+                follow_global_transform: true,
+            },
         );
 
         let (hook, hook_transform) = hook_query.get(hook_entity).unwrap();
         let line_entity = hook.line_entity;
         let line_start = line_query.get(line_entity).unwrap().start_point;
-        let reel_velocity = (line_start - hook_transform.translation).normalize() * 200.0;
+        let reel_velocity = (line_start - hook_transform.translation).normalize() * 300.0;
 
         commands.insert(
             hook_entity,
@@ -520,7 +540,6 @@ pub(super) fn redraw_line_when_hook_moves(
     mut line_query: Query<&mut Line>,
 ) {
     for (hook_info, changed_transform) in hook_query.iter() {
-        println!("Hook changed!");
         let line_entity = hook_info.line_entity;
 
         let mut line = line_query.get_mut(line_entity).unwrap();

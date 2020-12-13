@@ -57,23 +57,20 @@ pub(super) fn pause_button_system(
 }
 
 pub(super) fn add_pause_button(
-    container: &mut ChildBuilder,
+    commands: &mut Commands,
     pause_button_materials: &PauseButtonMaterials,
     materials: &mut Assets<ColorMaterial>,
-) {
-    container
+) -> Entity {
+    let pause_button = commands
         .spawn(NodeBundle {
             style: Style {
-                justify_content: JustifyContent::Center,
-                padding: Rect {
-                    left: Val::Px(50.0),
-                    right: Val::Px(50.0),
-                    top: Val::Px(20.0),
-                    ..Default::default()
-                },
                 ..Default::default()
             },
             material: materials.add(Color::NONE.into()),
+            draw: Draw {
+                is_visible: false,
+                ..Default::default()
+            },
             ..Default::default()
         })
         .with_children(|parent| {
@@ -81,13 +78,23 @@ pub(super) fn add_pause_button(
                 .spawn(ButtonBundle {
                     style: Style {
                         size: Size::new(Val::Px(64.0), Val::Px(64.0)),
+                        align_self: AlignSelf::FlexEnd,
+                        margin: Rect {
+                            top: Val::Percent(5.0),
+                            right: Val::Percent(5.0),
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
                     material: pause_button_materials.pause.clone(),
                     ..Default::default()
                 })
                 .with(PauseButton { is_paused: false });
-        });
+        })
+        .current_entity()
+        .unwrap();
+
+    pause_button
 }
 
 pub(super) fn reset_pause_button_on_restart(

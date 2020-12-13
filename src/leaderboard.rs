@@ -18,7 +18,7 @@ use crate::shared::{
 
 #[derive(Deserialize, Serialize)]
 pub struct LocalScores {
-    scores: Vec<u32>,
+    pub scores: Vec<u32>,
     // in case the filename is changed or something
     #[serde(skip)]
     lookup: String,
@@ -112,15 +112,24 @@ impl LocalScores {
         }
     }
 
-    pub fn get_top_ten(&self) -> &[u32] {
-        &self.scores.as_slice()
+    pub fn high_score(&self) -> Option<u32> {
+        if self.scores.len() == 0 {
+            None
+        } else {
+            Some(self.scores[0])
+        }
     }
 
-    pub fn add_new_score(&mut self, score: u32) {
+    pub fn add_new_score(&mut self, score: u32, score_saved_events: &mut Events<ScoreSaved>) {
         self.scores.push(score);
         self.scores.sort();
         self.scores.reverse();
         self.save_scores();
+
+        score_saved_events.send(ScoreSaved {
+            score,
+            score_index: self.scores.iter().position(|&r| r == score).unwrap(),
+        });
     }
 }
 
@@ -130,12 +139,19 @@ impl Default for LocalScores {
     }
 }
 
+#[derive(Debug)]
+pub struct ScoreSaved {
+    score: u32,
+    score_index: usize,
+}
+
 pub struct LeaderboardPlugin;
 
 impl Plugin for LeaderboardPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.init_resource::<LocalScores>()
-            .add_system_to_stage(stages::HANDLE_EVENTS, update_local_scores_system);
+            .add_system_to_stage(stages::HANDLE_EVENTS, update_local_scores_system)
+            .add_event::<ScoreSaved>();
     }
 }
 
@@ -144,12 +160,13 @@ pub fn update_local_scores_system(
     mut game_over_reader: Local<EventReader<GameOver>>,
     game_over_events: Res<Events<GameOver>>,
     mut local_scores: ResMut<LocalScores>,
+    mut score_saved_events: ResMut<Events<ScoreSaved>>,
 ) {
     if let Some(_game_over_event) = game_over_reader.earliest(&game_over_events) {
         println!(
             "Saving score new score ({:?}) to file {:?}",
             score.count, local_scores.lookup
         );
-        local_scores.add_new_score(score.count);
+        local_scores.add_new_score(score.count, &mut score_saved_events);
     }
 }

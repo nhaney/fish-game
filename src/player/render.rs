@@ -6,7 +6,9 @@ use super::attributes::BoostSupply;
 use super::states::{PlayerState, PlayerStates};
 use crate::shared::{
     animation::{Animation, AnimationFrame, AnimationState},
-    render::NonRotatingChild,
+    game::{GameOver, GameRestarted},
+    movement::Follow,
+    render::RenderLayer,
 };
 
 pub(super) struct PlayerStateAnimations {
@@ -121,7 +123,8 @@ pub(super) fn spawn_player_boost_trackers(
     mut meshes: ResMut<Assets<Mesh>>,
     player_width: f32,
     player_height: f32,
-    max_boosts: u8,
+    // TODO: Use this instead of hard coding 3 boosts
+    _max_boosts: u8,
     player_entity: Entity,
 ) {
     // calculate the positions of each of the boost trackers relative to the player
@@ -134,12 +137,18 @@ pub(super) fn spawn_player_boost_trackers(
     let extended_width = player_width;
     let tracker_height = player_height;
 
-    let mut tracker_positions: Vec<Vec3> = Vec::new();
+    // let mut tracker_positions: Vec<Vec3> = Vec::new();
 
-    for i in 0..max_boosts {
-        let x_offset = (i as f32 * (extended_width / max_boosts as f32)) - (extended_width / 2.0);
-        tracker_positions.push(Vec3::new(x_offset, tracker_height, 1.0));
-    }
+    // for i in 0..max_boosts {
+    //     let x_offset = (i as f32 * (extended_width / max_boosts as f32)) - (extended_width / 2.0);
+    //     tracker_positions.push(Vec3::new(x_offset, tracker_height, 1.0));
+    // }
+    // TODO: Make this more generic to handle more
+    let tracker_positions = vec![
+        Vec3::new(-extended_width / 2.0, tracker_height, 0.0),
+        Vec3::new(0.0, tracker_height, 0.0),
+        Vec3::new(extended_width / 2.0, tracker_height, 0.0),
+    ];
 
     let mut boost_trackers: Vec<Entity> = Vec::new();
 
@@ -149,12 +158,17 @@ pub(super) fn spawn_player_boost_trackers(
             .spawn(primitive(
                 pink_color.clone(),
                 &mut meshes,
-                ShapeType::Circle(5.0),
+                ShapeType::Circle(4.0),
                 TessellationMode::Fill(&FillOptions::default()),
-                tracker_position,
+                Vec3::zero(),
             ))
             .with(BoostTracker)
-            .with(NonRotatingChild)
+            .with(RenderLayer::Player)
+            .with(Follow {
+                entity_to_follow: player_entity,
+                offset: tracker_position,
+                follow_global_transform: false,
+            })
             .current_entity()
             .unwrap();
 
@@ -162,15 +176,15 @@ pub(super) fn spawn_player_boost_trackers(
             .spawn(primitive(
                 hot_pink_color.clone(),
                 &mut meshes,
-                ShapeType::Circle(6.0),
+                ShapeType::Circle(5.0),
                 TessellationMode::Stroke(&StrokeOptions::default()),
-                tracker_position,
+                Vec3::zero(),
             ))
-            .with(NonRotatingChild)
+            .with(RenderLayer::Player)
             .current_entity()
             .unwrap();
 
-        commands.push_children(player_entity, &[tracker, tracker_border]);
+        commands.push_children(tracker, &[tracker_border]);
         boost_trackers.push(tracker);
     }
 
@@ -192,19 +206,48 @@ pub(super) struct BoostTrackerDisplay {
 // frame
 pub(super) fn update_tracker_display_from_boost_supply(
     player_query: Query<(&BoostSupply, &BoostTrackerDisplay)>,
-    mut tracker_query: Query<(&mut Visible, &GlobalTransform), With<BoostTracker>>,
+    mut tracker_query: Query<&mut Draw, With<BoostTracker>>,
 ) {
     for (boost_supply, boost_tracker_display) in player_query.iter() {
         for i in 0..boost_supply.max_boosts {
             let tracker_entity = boost_tracker_display.trackers[i as usize];
-            let (mut tracker_visibility, transform) =
-                tracker_query.get_mut(tracker_entity).unwrap();
+            let mut tracker_visibility = tracker_query.get_mut(tracker_entity).unwrap();
 
             if (i + 1) <= boost_supply.count {
                 tracker_visibility.is_visible = true;
             } else {
                 tracker_visibility.is_visible = false;
             }
+        }
+    }
+}
+
+pub(super) fn despawn_trackers_on_gameover_or_restart(
+    commands: &mut Commands,
+    game_over_events: Res<Events<GameOver>>,
+    mut game_over_reader: Local<EventReader<GameOver>>,
+    game_restarted_events: Res<Events<GameRestarted>>,
+    mut game_restarted_reader: Local<EventReader<GameRestarted>>,
+    boost_tracker_query: Query<Entity, With<BoostTracker>>,
+    player_query: Query<Entity, With<BoostTrackerDisplay>>,
+) {
+    if let Some(_) = game_over_reader.earliest(&game_over_events) {
+        for boost_tracker in boost_tracker_query.iter() {
+            commands.despawn_recursive(boost_tracker);
+        }
+
+        for player_entity in player_query.iter() {
+            commands.remove_one::<BoostTrackerDisplay>(player_entity);
+        }
+    }
+
+    if let Some(_) = game_restarted_reader.earliest(&game_restarted_events) {
+        for boost_tracker in boost_tracker_query.iter() {
+            commands.despawn_recursive(boost_tracker);
+        }
+
+        for player_entity in player_query.iter() {
+            commands.remove_one::<BoostTrackerDisplay>(player_entity);
         }
     }
 }

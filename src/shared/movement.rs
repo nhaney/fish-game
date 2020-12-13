@@ -12,6 +12,7 @@ pub struct Destination {
 }
 
 pub struct DestinationReached {
+    #[allow(dead_code)]
     entity: Entity,
 }
 
@@ -23,6 +24,12 @@ impl SideScrollDirection {
     pub fn is_left(&self) -> bool {
         !self.0
     }
+}
+
+pub struct Follow {
+    pub entity_to_follow: Entity,
+    pub offset: Vec3,
+    pub follow_global_transform: bool,
 }
 
 pub fn movement_system(
@@ -37,7 +44,6 @@ pub fn movement_system(
     for (velocity, mut transform) in query.iter_mut() {
         transform.translation.x += time.delta_seconds() * velocity.0.x;
         transform.translation.y += time.delta_seconds() * velocity.0.y;
-        transform.translation.z = 1.0;
     }
 }
 
@@ -64,6 +70,24 @@ pub fn check_distance_from_destination(
             destination_reached_events.send(DestinationReached { entity });
             commands.remove::<(Velocity, Destination)>(entity);
             transform.translation = destination.point;
+        }
+    }
+}
+
+pub fn follow_system(
+    mut follower_query: Query<(&Follow, &mut Transform)>,
+    transform_query: Query<&Transform, Without<Follow>>,
+    global_transform_query: Query<&GlobalTransform, Without<Follow>>,
+) {
+    for (follow_data, mut follower_transform) in follower_query.iter_mut() {
+        if follow_data.follow_global_transform {
+            if let Ok(target_transform) = global_transform_query.get(follow_data.entity_to_follow) {
+                follower_transform.translation = target_transform.translation + follow_data.offset;
+            }
+        } else {
+            if let Ok(target_transform) = transform_query.get(follow_data.entity_to_follow) {
+                follower_transform.translation = target_transform.translation + follow_data.offset;
+            }
         }
     }
 }

@@ -18,6 +18,7 @@ impl Plugin for ObjectPlugins {
         .add_system_to_stage(stages::HANDLE_EVENTS, boat::player_bonked_handler)
         .add_system_to_stage(stages::HANDLE_EVENTS, boat::boat_exit_system)
         .add_system_to_stage(stages::HANDLE_EVENTS, boat::worm_eaten_system)
+        .add_system_to_stage(stages::HANDLE_EVENTS, boat::despawn_worms_on_game_over)
         // collision detection
         .add_system_to_stage(stages::CALCULATE_COLLISIONS, boat::despawn_boat_system)
         // final event handlers and presentation

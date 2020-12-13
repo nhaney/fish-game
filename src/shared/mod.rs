@@ -68,6 +68,8 @@ impl Plugin for SharedPlugin {
                 movement::check_distance_from_destination,
             )
             // Systems that prepare the frame for rendering and handles all final events
+            .add_system_to_stage(stages::PREPARE_RENDER, movement::follow_system)
+            .add_system_to_stage(stages::PREPARE_RENDER, render::adjust_to_render_layer)
             .add_system_to_stage(stages::PREPARE_RENDER, animation::animation_system)
             .add_system_to_stage(stages::PREPARE_RENDER, game::finalize_score)
             .add_system_to_stage(stages::PREPARE_RENDER, render::scale_camera_to_screen_size)
@@ -76,9 +78,7 @@ impl Plugin for SharedPlugin {
             .add_system_to_stage(stages::PREPARE_RENDER, game::reset_game_state_on_restart)
             .add_system_to_stage(stages::PREPARE_RENDER, game::reset_score_on_restart)
             .add_system_to_stage(stages::PREPARE_RENDER, game::pause_game)
-            .add_system_to_stage(stages::PREPARE_RENDER, game::unpause_game)
-            .add_system_to_stage(stages::PREPARE_RENDER, render::readjust_rotation)
-            .add_system_to_stage("post_render", render::print_rot_after_render);
+            .add_system_to_stage(stages::PREPARE_RENDER, game::unpause_game);
 
         // if cfg!(debug_assertions) {
         //     println!("Adding diagnostic plugins for debug mode...");

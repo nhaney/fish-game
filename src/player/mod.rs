@@ -3,6 +3,7 @@ use crate::shared::{
     collision::Collider,
     game::GameRestarted,
     movement::{SideScrollDirection, Velocity},
+    render::RenderLayer,
     stages,
 };
 use bevy::prelude::*;
@@ -59,6 +60,10 @@ impl Plugin for PlayerPlugin {
             )
             // systems that handle final events and presentation
             .add_system_to_stage(stages::HANDLE_EVENTS, reset_player)
+            .add_system_to_stage(
+                stages::HANDLE_EVENTS,
+                render::despawn_trackers_on_gameover_or_restart,
+            )
             .add_system_to_stage(
                 stages::PREPARE_RENDER,
                 render::player_state_animation_change_system,
@@ -164,6 +169,7 @@ fn spawn_player_entity(
                 width: PLAYER_WIDTH,
                 height: PLAYER_HEIGHT,
             },
+            RenderLayer::Player,
         ))
         .with_bundle(SpriteBundle {
             material: first_animation_frame.material_handle.clone(),

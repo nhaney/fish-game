@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use bevy::render::{camera::Camera, render_graph::base::camera::CAMERA_2D};
 
 use crate::player::attributes::{HungerCountdown, Player};
-use crate::shared::collision::Collider;
+use crate::shared::{
+    collision::Collider,
+    game::{GameOver, GameRestarted},
+};
 
 pub(super) struct PlayerCountdownText;
 
@@ -82,7 +85,32 @@ pub(super) fn reposition_countdown_text_system(
             );
 
             style.position.left = Val::Px(player_window_pos.x - scaled_sprite_size.x / 2.0);
+            style.position.right = Val::Px(player_window_pos.x + scaled_sprite_size.x / 2.0);
             style.position.bottom = Val::Px(player_window_pos.y + (scaled_sprite_size.y * 1.5));
+        }
+    }
+}
+
+pub(super) fn hide_countdown_on_game_over(
+    game_over_events: Res<Events<GameOver>>,
+    mut game_over_reader: Local<EventReader<GameOver>>,
+    mut countdown_text_query: Query<&mut Draw, With<PlayerCountdownText>>,
+) {
+    if let Some(_) = game_over_reader.earliest(&game_over_events) {
+        for mut countdown_text_visiblity in countdown_text_query.iter_mut() {
+            countdown_text_visiblity.is_visible = false;
+        }
+    }
+}
+
+pub(super) fn show_countdown_on_restart(
+    restart_events: Res<Events<GameRestarted>>,
+    mut restart_reader: Local<EventReader<GameRestarted>>,
+    mut countdown_text_query: Query<&mut Draw, With<PlayerCountdownText>>,
+) {
+    if let Some(_) = restart_reader.earliest(&restart_events) {
+        for mut countdown_text_visiblity in countdown_text_query.iter_mut() {
+            countdown_text_visiblity.is_visible = true;
         }
     }
 }
