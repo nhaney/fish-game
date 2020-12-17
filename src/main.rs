@@ -1,5 +1,6 @@
 use bevy::{prelude::*, window::WindowMode};
 
+mod audio;
 mod leaderboard;
 mod objects;
 mod player;
@@ -29,5 +30,6 @@ fn main() {
         .add_plugin(player::PlayerPlugin)
         .add_plugin(objects::ObjectPlugins)
         .add_plugin(ui::UIPlugin)
+        .add_plugin(audio::AudioPlugin)
         .run();
 }

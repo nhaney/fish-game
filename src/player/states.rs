@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use std::collections::HashSet;
 
 use super::attributes::{BoostSupply, Player, PlayerStats};
+use super::events::PlayerBoosted;
 use super::movement::move_player_from_input;
 use crate::shared::{
     game::GameState,
@@ -79,6 +80,7 @@ impl PlayerState {
         facing: &SideScrollDirection,
         target_speed: &Vec3,
         boost_supply: &mut BoostSupply,
+        player_boosted_events: &mut Events<PlayerBoosted>,
     ) {
         if self.can_transition_to(PlayerStates::Boost) {
             // println!(
@@ -115,6 +117,9 @@ impl PlayerState {
                         },
                     ),
                 );
+
+                // emit event that player boosted
+                player_boosted_events.send(PlayerBoosted { player: entity });
             } else {
                 // if the player was unable to boost, require that they release the boost
                 // button before attempting again
@@ -151,6 +156,7 @@ pub(super) struct BoostCooldown {
 /// Moves the player when they are not in the Boost state
 pub(super) fn swim_movement_system(
     mut commands: &mut Commands,
+    mut boost_events: ResMut<Events<PlayerBoosted>>,
     game_state: Res<GameState>,
     keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<(
@@ -183,6 +189,7 @@ pub(super) fn swim_movement_system(
                 &facing,
                 &target_speed,
                 &mut boost_supply,
+                &mut boost_events,
             );
         } else if target_speed != Vec3::zero() {
             state.start_swim();

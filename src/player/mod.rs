@@ -29,6 +29,7 @@ impl Plugin for PlayerPlugin {
             .add_event::<events::PlayerStarved>()
             .add_event::<events::PlayerBonked>()
             .add_event::<events::PlayerAte>()
+            .add_event::<events::PlayerBoosted>()
             // Startup systems initialize the player and its components
             .add_startup_system(init_player)
             // Timer systems
