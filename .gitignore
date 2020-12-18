@@ -1,2 +1,4 @@
 /target
 scores.json
+.doit.db
+__pycache__
