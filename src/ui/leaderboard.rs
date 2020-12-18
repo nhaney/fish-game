@@ -38,7 +38,7 @@ pub(super) fn add_local_leaderboard_nodes(
                 ..Default::default()
             },
             material: materials.add(Color::NONE.into()),
-            draw: Draw {
+            visible: Visible {
                 is_visible: false,
                 ..Default::default()
             },
@@ -68,7 +68,7 @@ pub(super) fn add_local_leaderboard_nodes(
                     ..Default::default()
                 },
             },
-            draw: Draw {
+            visible: Visible {
                 is_visible: false,
                 ..Default::default()
             },
@@ -98,7 +98,7 @@ pub(super) fn add_local_leaderboard_nodes(
                         ..Default::default()
                     },
                 },
-                draw: Draw {
+                visible: Visible {
                     is_visible: false,
                     ..Default::default()
                 },
@@ -123,7 +123,7 @@ pub(super) fn add_local_leaderboard_nodes(
 fn change_visibility_of_scoreboard(
     is_visible: bool,
     display: &HighScoreDisplay,
-    mut high_score_visibility_query: Query<&mut Draw, With<HighScoreDisplayNode>>,
+    mut high_score_visibility_query: Query<&mut Visible, With<HighScoreDisplayNode>>,
 ) {
     for score_entity in display.score_nodes.iter() {
         let mut score_visibility = high_score_visibility_query.get_mut(*score_entity).unwrap();
@@ -146,7 +146,7 @@ pub(super) fn show_high_scores_on_score_saved(
     mut score_saved_reader: Local<EventReader<ScoreSaved>>,
     high_score_display: Res<HighScoreDisplay>,
     local_scores: Res<LocalScores>,
-    high_score_visibility_query: Query<&mut Draw, With<HighScoreDisplayNode>>,
+    high_score_visibility_query: Query<&mut Visible, With<HighScoreDisplayNode>>,
     mut high_score_text_query: Query<&mut Text>,
 ) {
     if let Some(score_saved_event) = score_saved_reader.earliest(&score_saved_events) {
@@ -180,7 +180,7 @@ pub(super) fn hide_high_scores_on_restart(
     restart_events: Res<Events<GameRestarted>>,
     mut restart_reader: Local<EventReader<GameRestarted>>,
     high_score_display: Res<HighScoreDisplay>,
-    high_score_visibility_query: Query<&mut Draw, With<HighScoreDisplayNode>>,
+    high_score_visibility_query: Query<&mut Visible, With<HighScoreDisplayNode>>,
 ) {
     if let Some(_) = restart_reader.earliest(&restart_events) {
         change_visibility_of_scoreboard(false, &high_score_display, high_score_visibility_query);

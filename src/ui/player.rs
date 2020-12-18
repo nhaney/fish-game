@@ -71,8 +71,8 @@ pub(super) fn reposition_countdown_text_system(
         .unwrap();
 
     let window = windows.get_primary().unwrap();
-    let h = (window.height() / 2) as f32;
-    let w = (window.width() / 2) as f32;
+    let h = (window.height() / 2.0) as f32;
+    let w = (window.width() / 2.0) as f32;
 
     for mut style in text_query.iter_mut() {
         for (player_transform, player_size) in player_query.iter() {
@@ -94,7 +94,7 @@ pub(super) fn reposition_countdown_text_system(
 pub(super) fn hide_countdown_on_game_over(
     game_over_events: Res<Events<GameOver>>,
     mut game_over_reader: Local<EventReader<GameOver>>,
-    mut countdown_text_query: Query<&mut Draw, With<PlayerCountdownText>>,
+    mut countdown_text_query: Query<&mut Visible, With<PlayerCountdownText>>,
 ) {
     if let Some(_) = game_over_reader.earliest(&game_over_events) {
         for mut countdown_text_visiblity in countdown_text_query.iter_mut() {
@@ -106,7 +106,7 @@ pub(super) fn hide_countdown_on_game_over(
 pub(super) fn show_countdown_on_restart(
     restart_events: Res<Events<GameRestarted>>,
     mut restart_reader: Local<EventReader<GameRestarted>>,
-    mut countdown_text_query: Query<&mut Draw, With<PlayerCountdownText>>,
+    mut countdown_text_query: Query<&mut Visible, With<PlayerCountdownText>>,
 ) {
     if let Some(_) = restart_reader.earliest(&restart_events) {
         for mut countdown_text_visiblity in countdown_text_query.iter_mut() {

@@ -14,7 +14,7 @@
 - [x]  Implement worms
 - [x]  Implement simple animation (fish and worms)
 - [ ]  Implement sfx
-- [ ]  Implement high score saving
+- [x]  Implement high score saving
 
 ## Additional features
 
@@ -36,4 +36,8 @@
 - [ ] Clean up code/warnings
 - [ ] Build + deploy pipeline/workflow to put WASM build on my site
 - [ ] Balance difficulty
+- [ ] Update bevy version
+  - Update system syntax
+  - Update stages/plan for fixed update stages (implement in the future)
+  - Add in logging instead of println! calls
 

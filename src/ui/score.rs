@@ -18,7 +18,7 @@ pub(super) fn add_score_text(
                 ..Default::default()
             },
             material: materials.add(Color::NONE.into()),
-            draw: Draw {
+            visible: Visible {
                 is_visible: false,
                 ..Default::default()
             },

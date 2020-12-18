@@ -150,7 +150,7 @@ pub struct LeaderboardPlugin;
 impl Plugin for LeaderboardPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.init_resource::<LocalScores>()
-            .add_system_to_stage(stages::HANDLE_EVENTS, update_local_scores_system)
+            .add_system_to_stage(stages::HANDLE_EVENTS, update_local_scores_system.system())
             .add_event::<ScoreSaved>();
     }
 }

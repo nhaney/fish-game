@@ -67,7 +67,7 @@ pub(super) fn add_pause_button(
                 ..Default::default()
             },
             material: materials.add(Color::NONE.into()),
-            draw: Draw {
+            visible: Visible {
                 is_visible: false,
                 ..Default::default()
             },

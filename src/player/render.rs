@@ -206,7 +206,7 @@ pub(super) struct BoostTrackerDisplay {
 // frame
 pub(super) fn update_tracker_display_from_boost_supply(
     player_query: Query<(&BoostSupply, &BoostTrackerDisplay)>,
-    mut tracker_query: Query<&mut Draw, With<BoostTracker>>,
+    mut tracker_query: Query<&mut Visible, With<BoostTracker>>,
 ) {
     for (boost_supply, boost_tracker_display) in player_query.iter() {
         for i in 0..boost_supply.max_boosts {

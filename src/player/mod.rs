@@ -31,47 +31,54 @@ impl Plugin for PlayerPlugin {
             .add_event::<events::PlayerAte>()
             .add_event::<events::PlayerBoosted>()
             // Startup systems initialize the player and its components
-            .add_startup_system(init_player)
+            .add_startup_system(init_player.system())
             // Timer systems
-            .add_system_to_stage(stage::EVENT, states::boost_cooldown_system)
-            .add_system_to_stage(stage::EVENT, attributes::hunger_countdown_system)
+            .add_system_to_stage(stage::EVENT, states::boost_cooldown_system.system())
+            .add_system_to_stage(stage::EVENT, attributes::hunger_countdown_system.system())
             // systems that handle input/velocity calculation
             // systems that handle collision events
-            .add_system_to_stage(stages::HANDLE_EVENTS, attributes::add_boost_system)
-            .add_system_to_stage(stages::HANDLE_EVENTS, animations::player_starved_handler)
-            .add_system_to_stage(stages::HANDLE_EVENTS, states::swim_movement_system)
-            .add_system_to_stage(stages::MOVEMENT, states::boost_movement_system)
-            .add_system_to_stage(stages::MOVEMENT, movement::sink_system)
+            .add_system_to_stage(stages::HANDLE_EVENTS, attributes::add_boost_system.system())
+            .add_system_to_stage(
+                stages::HANDLE_EVENTS,
+                animations::player_starved_handler.system(),
+            )
+            .add_system_to_stage(stages::HANDLE_EVENTS, states::swim_movement_system.system())
+            .add_system_to_stage(stages::MOVEMENT, states::boost_movement_system.system())
+            .add_system_to_stage(stages::MOVEMENT, movement::sink_system.system())
             // This system needs to happen before render, but after final position has
             // been calculated to prevent stuttering movement
-            .add_stage_before(stages::PREPARE_RENDER, "adjust_position")
-            .add_system_to_stage("adjust_position", collision::player_bounds_system)
+            .add_stage_before(
+                stages::PREPARE_RENDER,
+                "adjust_position",
+                SystemStage::parallel(),
+            )
+            .add_system_to_stage("adjust_position", collision::player_bounds_system.system())
             // systems that calculate collision
             .add_system_to_stage(
                 stages::CALCULATE_COLLISIONS,
-                collision::player_hook_collision_system,
+                collision::player_hook_collision_system.system(),
             )
             .add_system_to_stage(
                 stages::CALCULATE_COLLISIONS,
-                collision::player_worm_collision_system,
+                collision::player_worm_collision_system.system(),
             )
             .add_system_to_stage(
                 stages::CALCULATE_COLLISIONS,
-                collision::player_boat_collision_system,
+                collision::player_boat_collision_system.system(),
             )
             // systems that handle final events and presentation
-            .add_system_to_stage(stages::HANDLE_EVENTS, reset_player)
+            .add_system_to_stage(stages::HANDLE_EVENTS, reset_player.system())
             .add_system_to_stage(
                 stages::HANDLE_EVENTS,
-                render::despawn_trackers_on_gameover_or_restart,
+                render::despawn_trackers_on_gameover_or_restart.system(),
             )
             .add_system_to_stage(
                 stages::PREPARE_RENDER,
-                render::player_state_animation_change_system,
+                render::player_state_animation_change_system.system(),
             )
             .add_system_to_stage(
                 stages::PREPARE_RENDER,
-                render::update_tracker_display_from_boost_supply,
+                render::update_tracker_display_from_boost_supply.system(),
             );
     }
 }
