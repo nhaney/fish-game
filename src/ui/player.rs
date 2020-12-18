@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::render::{camera::Camera, render_graph::base::camera::CAMERA_2D};
 
+use super::FontHandles;
 use crate::player::attributes::{HungerCountdown, Player};
 use crate::shared::{
     collision::Collider,
@@ -10,7 +11,7 @@ use crate::shared::{
 pub(super) struct PlayerCountdownText;
 
 // TODO: When bevy allows text to be a child of a parent entity, change this to not use the UI system.
-pub(super) fn add_countdown_text(commands: &mut Commands, asset_server: Res<AssetServer>) {
+pub(super) fn add_countdown_text(commands: &mut Commands, fonts: Res<FontHandles>) {
     commands
         .spawn(TextBundle {
             style: Style {
@@ -25,7 +26,7 @@ pub(super) fn add_countdown_text(commands: &mut Commands, asset_server: Res<Asse
             },
             text: Text {
                 value: "30.0".to_string(),
-                font: asset_server.load("fonts/Chonkly.ttf"),
+                font: fonts.main_font.clone(),
                 style: TextStyle {
                     font_size: 30.0,
                     alignment: TextAlignment {

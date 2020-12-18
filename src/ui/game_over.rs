@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use super::FontHandles;
 use crate::player::events::{PlayerBonked, PlayerHooked, PlayerStarved};
 use crate::shared::game::GameRestarted;
 
@@ -8,8 +9,8 @@ pub(super) struct RestartText;
 
 pub(super) fn add_game_over_text(
     commands: &mut Commands,
-    asset_server: &AssetServer,
     materials: &mut Assets<ColorMaterial>,
+    fonts: &FontHandles,
 ) -> Entity {
     let root_game_over_node = commands
         .spawn(NodeBundle {
@@ -34,8 +35,8 @@ pub(super) fn add_game_over_text(
                         ..Default::default()
                     },
                     text: Text {
-                        value: "HOOKED".to_string(),
-                        font: asset_server.load("fonts/Chonkly.ttf"),
+                        value: "HOOKED!".to_string(),
+                        font: fonts.main_font.clone(),
                         style: TextStyle {
                             font_size: 100.0,
                             color: Color::RED,
@@ -65,7 +66,7 @@ pub(super) fn add_game_over_text(
                             },
                             text: Text {
                                 value: "Press [R] to restart".to_string(),
-                                font: asset_server.load("fonts/Chonkly.ttf"),
+                                font: fonts.main_font.clone(),
                                 style: TextStyle {
                                     font_size: 50.0,
                                     color: Color::RED,
@@ -117,7 +118,7 @@ pub(super) fn show_game_over_text(
     }
 
     if let Some(_) = player_starved_reader.earliest(&player_starved_events) {
-        game_over_message = "STARVED".to_string();
+        game_over_message = "STARVED!".to_string();
     }
 
     if game_over_message != "".to_string() {

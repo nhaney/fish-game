@@ -2,24 +2,23 @@ use bevy::prelude::*;
 
 use crate::player::events::{PlayerAte, PlayerBonked, PlayerBoosted, PlayerHooked, PlayerStarved};
 
-pub(super) struct SfxFiles {
-    bonked: String,
-    hooked: String,
-    starved: String,
-    ate: String,
-    boost: String,
+pub(super) struct SfxHandles {
+    bonked: Handle<AudioSource>,
+    hooked: Handle<AudioSource>,
+    starved: Handle<AudioSource>,
+    eat: Handle<AudioSource>,
+    boost: Handle<AudioSource>,
 }
 
-impl FromResources for SfxFiles {
+impl FromResources for SfxHandles {
     fn from_resources(resources: &Resources) -> Self {
-        // let asset_server = resources.get::<AssetServer>().unwrap();
-        // let mut sfx = resources.get_mut::<Assets<AudioSource>>().unwrap();
+        let asset_server = resources.get::<AssetServer>().unwrap();
         Self {
-            bonked: "audio/sfx/bonked.ogg".to_string(),
-            hooked: "audio/sfx/hooked.ogg".to_string(),
-            starved: "audio/sfx/starved.ogg".to_string(),
-            ate: "audio/sfx/ate.ogg".to_string(),
-            boost: "audio/sfx/boost.ogg".to_string(),
+            bonked: asset_server.load("audio/sfx/bonked.ogg"),
+            hooked: asset_server.load("audio/sfx/hooked.ogg"),
+            starved: asset_server.load("audio/sfx/starved.ogg"),
+            eat: asset_server.load("audio/sfx/eat.ogg"),
+            boost: asset_server.load("audio/sfx/boost.ogg"),
         }
     }
 }
@@ -35,37 +34,31 @@ pub(super) fn play_sfx_system(
     player_ate_events: Res<Events<PlayerAte>>,
     mut player_boosted_reader: Local<EventReader<PlayerBoosted>>,
     player_boosted_events: Res<Events<PlayerBoosted>>,
-    sound_files: Res<SfxFiles>,
-    asset_server: Res<AssetServer>,
-    mut audio: Res<Audio>,
+    sfx_handles: Res<SfxHandles>,
+    audio: Res<Audio>,
 ) {
     for _ in player_hooked_reader.iter(&player_hooked_events) {
         debug!("Playing hooked sound effect");
-        let sfx = asset_server.load("audio/sfx/hooked.ogg");
-        audio.play(sfx);
+        audio.play(sfx_handles.hooked.clone());
     }
 
     for _ in player_starved_reader.iter(&player_starved_events) {
         debug!("Playing starved sound effect");
-        let sfx = asset_server.load("audio/sfx/starved.ogg");
-        audio.play(sfx);
+        audio.play(sfx_handles.starved.clone());
     }
 
     for _ in player_bonked_reader.iter(&player_bonked_events) {
         debug!("Playing bonked sound effect");
-        let sfx = asset_server.load("audio/sfx/bonked.ogg");
-        audio.play(sfx);
+        audio.play(sfx_handles.bonked.clone());
     }
 
     for _ in player_ate_reader.iter(&player_ate_events) {
         debug!("Playing ate sound effect");
-        let sfx = asset_server.load("audio/sfx/eat.ogg");
-        audio.play(sfx);
+        audio.play(sfx_handles.eat.clone());
     }
 
     for _ in player_boosted_reader.iter(&player_boosted_events) {
         debug!("Playing boosted sound effect");
-        let sfx = asset_server.load("audio/sfx/boost.ogg");
-        audio.play(sfx);
+        audio.play(sfx_handles.boost.clone());
     }
 }

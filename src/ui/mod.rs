@@ -15,6 +15,7 @@ impl Plugin for UIPlugin {
         debug!("Building UI plugin...");
         // pause button sprite materials
         app.init_resource::<pause::PauseButtonMaterials>()
+            .init_resource::<FontHandles>()
             // Startup systems - create ui elements
             .add_startup_system(player::add_countdown_text.system())
             .add_startup_system(setup_ui.system())
@@ -73,7 +74,7 @@ impl Plugin for UIPlugin {
 fn setup_ui(
     commands: &mut Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    asset_server: Res<AssetServer>,
+    fonts: Res<FontHandles>,
     pause_button_materials: Res<pause::PauseButtonMaterials>,
 ) {
     commands.spawn(CameraUiBundle::default());
@@ -92,10 +93,10 @@ fn setup_ui(
         .unwrap();
 
     debug!("Adding score text to UI...");
-    let score_node = score::add_score_text(commands, &asset_server, &mut materials);
+    let score_node = score::add_score_text(commands, &mut materials, &fonts);
 
     debug!("Adding blank game over text to UI...");
-    let game_over_node = game_over::add_game_over_text(commands, &asset_server, &mut materials);
+    let game_over_node = game_over::add_game_over_text(commands, &mut materials, &fonts);
 
     debug!("Adding pause button to UI...");
     let pause_button_node =
@@ -103,11 +104,26 @@ fn setup_ui(
 
     debug!("Adding high scores to UI...");
     let leaderboard_node =
-        leaderboard::add_local_leaderboard_nodes(commands, &asset_server, &mut materials);
+        leaderboard::add_local_leaderboard_nodes(commands, &mut materials, &fonts);
     commands.push_children(score_node, &[leaderboard_node]);
 
     commands.push_children(
         root_ui_node,
         &[score_node, game_over_node, pause_button_node],
     );
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct FontHandles {
+    main_font: Handle<Font>,
+}
+
+impl FromResources for FontHandles {
+    fn from_resources(resources: &Resources) -> Self {
+        let asset_server = resources.get::<AssetServer>().unwrap();
+        debug!("Loading fonts...");
+        Self {
+            main_font: asset_server.load("fonts/Chonkly.ttf"),
+        }
+    }
 }

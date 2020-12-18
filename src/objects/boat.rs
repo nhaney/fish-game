@@ -235,7 +235,8 @@ fn spawn_boat(
         });
 }
 
-const POLE_HEIGHT: f32 = 5.0;
+const ROD_LENGTH: f32 = 5.0;
+const POLE_HEIGHT: f32 = 10.0;
 const FISHING_LINE_WIDTH: f32 = 1.0;
 const HOOK_SIZE: f32 = 16.0;
 const WORM_SIZE: f32 = 16.0;
@@ -248,38 +249,65 @@ fn spawn_lines(
     meshes: &mut ResMut<Assets<Mesh>>,
 ) {
     // all poles start above the top of the boat at the same y position
-    let start_y = (boat_stats.height / 2.0) + POLE_HEIGHT;
-
     let line_material = boat_materials.line.clone();
     let hook_material = boat_materials.hook.clone();
     let worm_animation = boat_materials.worm.clone();
 
     for i in 1..boat_stats.num_poles + 1 {
-        let x_offset = i as f32 * (boat_stats.width / (boat_stats.num_poles + 1) as f32);
+        // start point of the rod from the start of the boat
+        let rod_offset = i as f32 * (boat_stats.width / (boat_stats.num_poles + 1) as f32);
 
-        let start_x = -(boat_stats.width / 2.0) + x_offset;
-
-        let start_point = Vec3::new(start_x, start_y, 0.0);
-
-        let line_length = rng.gen_range(100, 325) as f32;
-        let line_angle = rng.gen_range(225, 271) as f32;
-
-        let end_point = Vec3::new(
-            line_length * (std::f32::consts::PI * (line_angle / 180.0)).cos(),
-            line_length * (std::f32::consts::PI * (line_angle / 180.0)).sin(),
+        // the start point of the rod
+        let rod_start_point = Vec3::new(
+            -(boat_stats.width / 2.0) + rod_offset,
+            boat_stats.height / 2.0,
             0.0,
         );
 
-        let mid_point = Vec3::new(
-            (start_point.x + end_point.x) / 2.0,
-            (start_point.y + end_point.y) / 2.0,
+        // the point that the rod angles
+        let rod_angle_point = Vec3::new(rod_start_point.x, rod_start_point.y + POLE_HEIGHT, 0.0);
+
+        // the start point of the line, behind the rod angle point
+        let line_start_point = Vec3::new(rod_angle_point.x - ROD_LENGTH, rod_angle_point.y, 0.0);
+
+        let line_length = rng.gen_range(100 + boat_stats.height as u32, 325) as f32;
+        let line_angle = rng.gen_range(225, 271) as f32;
+
+        let line_end_point = Vec3::new(
+            line_start_point.x + line_length * (std::f32::consts::PI * (line_angle / 180.0)).cos(),
+            line_start_point.y + line_length * (std::f32::consts::PI * (line_angle / 180.0)).sin(),
             0.0,
+        );
+
+        let line_mid_point = Vec3::new(
+            (line_start_point.x + line_end_point.x) / 2.0,
+            (line_start_point.y + line_end_point.y) / 2.0,
+            0.0,
+        );
+
+        // spawn the rod
+        let mut builder = PathBuilder::new();
+        builder.move_to(point(rod_start_point.x, rod_start_point.y));
+        builder.line_to(point(rod_angle_point.x, rod_angle_point.y));
+        builder.line_to(point(line_start_point.x, line_start_point.y));
+        let rod = builder.build();
+
+        parent.spawn(
+            rod.stroke(
+                line_material.clone(),
+                meshes,
+                Vec3::new(0.0, 0.0, 1.0),
+                &StrokeOptions::default()
+                    .with_line_width(FISHING_LINE_WIDTH)
+                    .with_line_cap(LineCap::Round)
+                    .with_line_join(LineJoin::Round),
+            ),
         );
 
         // spawn the line that connects the start and end points
-        let mut builder = PathBuilder::new();
-        builder.move_to(point(start_point.x, start_point.y));
-        builder.line_to(point(end_point.x, end_point.y));
+        builder = PathBuilder::new();
+        builder.move_to(point(line_start_point.x, line_start_point.y));
+        builder.line_to(point(line_end_point.x, line_end_point.y));
         builder.close();
 
         let line = builder.build();
@@ -289,7 +317,7 @@ fn spawn_lines(
                 line.stroke(
                     line_material.clone(),
                     meshes,
-                    Vec3::new(0.0, 0.0, 0.0),
+                    Vec3::new(0.0, 0.0, 1.0),
                     &StrokeOptions::default()
                         .with_line_width(FISHING_LINE_WIDTH)
                         .with_line_cap(LineCap::Round)
@@ -297,14 +325,14 @@ fn spawn_lines(
                 ),
             )
             .with(Line {
-                start_point,
-                end_point,
+                start_point: line_start_point,
+                end_point: line_end_point,
             })
             .current_entity()
             .unwrap();
 
         // spawn the hook at the end point of the line
-        let mut hook_point = end_point.clone();
+        let mut hook_point = line_end_point.clone();
         hook_point.y -= HOOK_SIZE / 2.0;
 
         parent
@@ -326,8 +354,8 @@ fn spawn_lines(
             // spawn a worm on the line between the endpoint and the mid point
             let worm_distance_from_mid = rng.gen_range(0, (line_length / 2.0) as u32) as f32;
 
-            let worm_pos =
-                mid_point - ((mid_point - end_point).normalize() * worm_distance_from_mid);
+            let worm_pos = line_mid_point
+                - ((line_mid_point - line_end_point).normalize() * worm_distance_from_mid);
 
             let worm_initial_animation_frame = worm_animation.frames[0].clone();
             parent

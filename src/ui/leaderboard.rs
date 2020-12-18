@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use super::FontHandles;
 use crate::leaderboard::{LocalScores, ScoreSaved};
 use crate::shared::game::GameRestarted;
 
@@ -17,8 +18,8 @@ pub(super) struct HighScoreDisplay {
 
 pub(super) fn add_local_leaderboard_nodes(
     commands: &mut Commands,
-    asset_server: &AssetServer,
     materials: &mut Assets<ColorMaterial>,
+    fonts: &FontHandles,
 ) -> Entity {
     let leaderboard_node = commands
         .spawn(NodeBundle {
@@ -61,7 +62,7 @@ pub(super) fn add_local_leaderboard_nodes(
             },
             text: Text {
                 value: format!("High scores:"),
-                font: asset_server.load("fonts/Chonkly.ttf"),
+                font: fonts.main_font.clone(),
                 style: TextStyle {
                     font_size: 35.0,
                     color: Color::BLACK,
@@ -91,7 +92,7 @@ pub(super) fn add_local_leaderboard_nodes(
                 },
                 text: Text {
                     value: format!("{}. test", i + 1),
-                    font: asset_server.load("fonts/Chonkly.ttf"),
+                    font: fonts.main_font.clone(),
                     style: TextStyle {
                         font_size: 25.0,
                         color: Color::BLACK,

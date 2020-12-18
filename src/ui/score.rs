@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use super::FontHandles;
 use crate::leaderboard::LocalScores;
 use crate::shared::game::{GameOver, GameRestarted, Score};
 
@@ -7,8 +8,8 @@ pub(super) struct ScoreText;
 
 pub(super) fn add_score_text(
     commands: &mut Commands,
-    asset_server: &AssetServer,
     materials: &mut Assets<ColorMaterial>,
+    fonts: &FontHandles,
 ) -> Entity {
     let root_score_node = commands
         .spawn(NodeBundle {
@@ -29,7 +30,7 @@ pub(super) fn add_score_text(
                 .spawn(TextBundle {
                     text: Text {
                         value: "Score:".to_string(),
-                        font: asset_server.load("fonts/Chonkly.ttf"),
+                        font: fonts.main_font.clone(),
                         style: TextStyle {
                             font_size: 60.0,
                             color: Color::GREEN,
