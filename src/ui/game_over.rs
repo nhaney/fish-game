@@ -142,7 +142,7 @@ pub(super) fn clear_game_over_message_on_restart(
     >,
 ) {
     if let Some(_) = restart_reader.earliest(&restart_events) {
-        println!("Clearing game over text after game was restarted.");
+        debug!("Clearing game over text after game was restarted.");
         for mut game_over_draw in game_over_text_query.iter_mut() {
             game_over_draw.is_visible = false;
         }

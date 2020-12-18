@@ -30,7 +30,7 @@ pub struct AnimationState {
 // TODO: Add a sprite material when this component is added
 impl AnimationState {
     pub fn from_animation(animation: &Animation, speed_multiplier: f32) -> Self {
-        println!("speed multiplier: {:?}", speed_multiplier);
+        debug!("speed multiplier: {:?}", speed_multiplier);
         AnimationState {
             animation: animation.clone(),
             timer: Timer::from_seconds(animation.frames[0].time, false),

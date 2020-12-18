@@ -68,7 +68,7 @@ pub(super) fn player_hook_collision_system(
             let hook_pos = hook_transform.translation;
             let hook_size = hook_collider.as_vec2();
             if let Some(collision) = collide(player_pos, player_size, hook_pos, hook_size) {
-                println!("Player collided with a hook!");
+                debug!("Player collided with a hook!");
 
                 player_hooked_events.send(PlayerHooked {
                     player_entity,
@@ -97,7 +97,7 @@ pub(super) fn player_worm_collision_system(
             let worm_pos = worm_transform.translation;
             let worm_size = worm_collider.as_vec2();
             if let Some(collision) = collide(player_pos, player_size, worm_pos, worm_size) {
-                println!("Player collided with a worm!");
+                debug!("Player collided with a worm!");
                 player_ate_events.send(PlayerAte {
                     player_entity,
                     worm_entity,
@@ -125,7 +125,7 @@ pub(super) fn player_boat_collision_system(
             let boat_pos = boat_transform.translation;
             let boat_size = boat_collider.as_vec2();
             if let Some(collision) = collide(player_pos, player_size, boat_pos, boat_size) {
-                println!("Player collided with a boat!");
+                debug!("Player collided with a boat!");
                 player_bonk_events.send(PlayerBonked {
                     player_entity,
                     boat_entity,

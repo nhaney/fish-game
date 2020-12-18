@@ -15,7 +15,7 @@ impl Default for GameRng {
         let mut seed: <ChaCha8Rng as SeedableRng>::Seed = Default::default();
         thread_rng().fill(&mut seed);
 
-        println!("Random seed used: {:?}", seed);
+        debug!("Random seed used: {:?}", seed);
 
         GameRng {
             rng: ChaCha8Rng::from_seed(seed),
@@ -33,7 +33,7 @@ pub(super) fn reset_rng_on_restart(
         let mut seed: <ChaCha8Rng as SeedableRng>::Seed = Default::default();
         thread_rng().fill(&mut seed);
 
-        println!("Generated random seed after restart: {:?}", seed);
+        debug!("Generated random seed after restart: {:?}", seed);
 
         rng.rng = ChaCha8Rng::from_seed(seed);
         rng.seed = seed;

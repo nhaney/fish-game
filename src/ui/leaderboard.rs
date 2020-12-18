@@ -150,7 +150,7 @@ pub(super) fn show_high_scores_on_score_saved(
     mut high_score_text_query: Query<&mut Text>,
 ) {
     if let Some(score_saved_event) = score_saved_reader.earliest(&score_saved_events) {
-        println!(
+        debug!(
             "Got score saved event: {:?}, displaying high scores...",
             score_saved_event
         );

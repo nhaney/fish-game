@@ -470,7 +470,7 @@ pub(super) fn reset_boats_on_restart(
     boat_query: Query<Entity, With<Boat>>,
 ) {
     if let Some(_) = restart_reader.earliest(&restart_events) {
-        println!("Despawning all boats and restarting spawner because of restart event.");
+        debug!("Despawning all boats and restarting spawner because of restart event.");
         // despawn all boats
         for boat_entity in boat_query.iter() {
             commands.despawn_recursive(boat_entity);

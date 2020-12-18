@@ -66,7 +66,7 @@ pub fn check_distance_from_destination(
         let distance_from_destination = (destination.point - transform.translation).length();
 
         if distance_from_destination < destination.trigger_distance {
-            println!("Destination has been reached for {:?}", entity);
+            debug!("Destination has been reached for {:?}", entity);
             destination_reached_events.send(DestinationReached { entity });
             commands.remove::<(Velocity, Destination)>(entity);
             transform.translation = destination.point;

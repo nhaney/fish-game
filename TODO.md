@@ -36,8 +36,8 @@
 - [ ] Clean up code/warnings
 - [ ] Build + deploy pipeline/workflow to put WASM build on my site
 - [ ] Balance difficulty
-- [ ] Update bevy version
-  - Update system syntax
-  - Update stages/plan for fixed update stages (implement in the future)
-  - Add in logging instead of println! calls
+- [x] Update bevy version
+  x Update system syntax
+  x Update stages/plan for fixed update stages (implement in the future)
+  x Add in logging instead of println! calls
 

@@ -12,7 +12,7 @@ pub struct UIPlugin;
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        println!("Building UI plugin...");
+        debug!("Building UI plugin...");
         // pause button sprite materials
         app.init_resource::<pause::PauseButtonMaterials>()
             // Startup systems - create ui elements
@@ -91,17 +91,17 @@ fn setup_ui(
         .current_entity()
         .unwrap();
 
-    println!("Adding score text to UI...");
+    debug!("Adding score text to UI...");
     let score_node = score::add_score_text(commands, &asset_server, &mut materials);
 
-    println!("Adding blank game over text to UI...");
+    debug!("Adding blank game over text to UI...");
     let game_over_node = game_over::add_game_over_text(commands, &asset_server, &mut materials);
 
-    println!("Adding pause button to UI...");
+    debug!("Adding pause button to UI...");
     let pause_button_node =
         pause::add_pause_button(commands, &pause_button_materials, &mut materials);
 
-    println!("Adding high scores to UI...");
+    debug!("Adding high scores to UI...");
     let leaderboard_node =
         leaderboard::add_local_leaderboard_nodes(commands, &asset_server, &mut materials);
     commands.push_children(score_node, &[leaderboard_node]);

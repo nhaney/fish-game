@@ -20,8 +20,14 @@
       }
     </style>
   </head>
+  <body>
+      <button name="start-button">Click to start game</button>
+  </body>
   <script type="module">
     import init from './target/wasm.js'
-    init()
+    function startGame() {
+        init()
+    }
+    document.querySelector('button').addEventListener('click', startGame);
   </script>
 </html>

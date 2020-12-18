@@ -48,7 +48,7 @@ impl PlayerState {
 
     pub(super) fn start_swim(&mut self) {
         if self.can_transition_to(PlayerStates::Swim) {
-            // println!(
+            // debug!(
             //     "Transitioning from state {:?} to {:?}.",
             //     self.current_state,
             //     PlayerStates::Swim
@@ -59,7 +59,7 @@ impl PlayerState {
 
     pub(super) fn start_idle(&mut self) {
         if self.can_transition_to(PlayerStates::Idle) {
-            // println!(
+            // debug!(
             //     "Transitioning from state {:?} to {:?}.",
             //     self.current_state,
             //     PlayerStates::Idle
@@ -83,7 +83,7 @@ impl PlayerState {
         player_boosted_events: &mut Events<PlayerBoosted>,
     ) {
         if self.can_transition_to(PlayerStates::Boost) {
-            // println!(
+            // debug!(
             //     "Transitioning from state {:?} to {:?}",
             //     self.current_state,
             //     PlayerStates::Boost
@@ -220,7 +220,7 @@ pub(super) fn boost_movement_system(
         boost_data.timer.tick(time.delta_seconds());
 
         if boost_data.timer.finished() {
-            // println!("Boost finished!");
+            // debug!("Boost finished!");
             commands.remove_one::<BoostData>(entity);
             match boost_data.prev_state {
                 PlayerStates::Idle => player_state.start_idle(),
@@ -254,7 +254,7 @@ pub(super) fn boost_cooldown_system(
             boost_cooldown.did_release || !keyboard_input.pressed(KeyCode::Space);
 
         if boost_cooldown.timer.finished() && boost_cooldown.did_release {
-            // println!("Boost cooldown finished. Boost can be used again.");
+            // debug!("Boost cooldown finished. Boost can be used again.");
             commands.remove_one::<BoostCooldown>(entity);
             player_state
                 .blocked_transitions

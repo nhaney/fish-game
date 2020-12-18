@@ -40,31 +40,31 @@ pub(super) fn play_sfx_system(
     mut audio: Res<Audio>,
 ) {
     for _ in player_hooked_reader.iter(&player_hooked_events) {
-        println!("Playing hooked sound effect");
+        debug!("Playing hooked sound effect");
         let sfx = asset_server.load("audio/sfx/hooked.ogg");
         audio.play(sfx);
     }
 
     for _ in player_starved_reader.iter(&player_starved_events) {
-        println!("Playing starved sound effect");
+        debug!("Playing starved sound effect");
         let sfx = asset_server.load("audio/sfx/starved.ogg");
         audio.play(sfx);
     }
 
     for _ in player_bonked_reader.iter(&player_bonked_events) {
-        println!("Playing bonked sound effect");
+        debug!("Playing bonked sound effect");
         let sfx = asset_server.load("audio/sfx/bonked.ogg");
         audio.play(sfx);
     }
 
     for _ in player_ate_reader.iter(&player_ate_events) {
-        println!("Playing ate sound effect");
+        debug!("Playing ate sound effect");
         let sfx = asset_server.load("audio/sfx/eat.ogg");
         audio.play(sfx);
     }
 
     for _ in player_boosted_reader.iter(&player_boosted_events) {
-        println!("Playing boosted sound effect");
+        debug!("Playing boosted sound effect");
         let sfx = asset_server.load("audio/sfx/boost.ogg");
         audio.play(sfx);
     }

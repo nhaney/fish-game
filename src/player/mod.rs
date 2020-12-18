@@ -21,7 +21,7 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        println!("Building player plugin...");
+        debug!("Building player plugin...");
         // Resources for player sprites and animations
         app.init_resource::<render::PlayerStateAnimations>()
             // Events that indicate either a player collided with something/died
@@ -116,7 +116,7 @@ fn reset_player(
     player_query: Query<Entity, With<attributes::Player>>,
 ) {
     if let Some(_) = restart_reader.earliest(&restart_events) {
-        println!("Despawning current player entity and creating a new one.");
+        debug!("Despawning current player entity and creating a new one.");
         let player_entity = player_query.iter().next().unwrap();
         // despawn current player
         commands.despawn_recursive(player_entity);

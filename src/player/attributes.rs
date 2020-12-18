@@ -34,7 +34,7 @@ impl BoostSupply {
                 true
             }
             false => {
-                println!("Cannot use boost because there are none left.");
+                debug!("Cannot use boost because there are none left.");
                 false
             }
         }
@@ -47,7 +47,7 @@ impl BoostSupply {
                 true
             }
             false => {
-                println!(
+                debug!(
                     "Could not add boost because already at max boosts ({:?})",
                     self.max_boosts
                 );
@@ -87,7 +87,7 @@ pub(super) fn hunger_countdown_system(
 
     for (mut hunger_countdown, player_entity) in query.iter_mut() {
         if players_to_add_time_for.contains(&player_entity) {
-            println!(
+            debug!(
                 "Adding extra time because player ate a worm. Time left: {:?}",
                 hunger_countdown.time_left
             );
@@ -98,7 +98,7 @@ pub(super) fn hunger_countdown_system(
 
         if hunger_countdown.time_left < 0.0 {
             // emit starved event for entity
-            println!("Player starved!");
+            debug!("Player starved!");
             starved_events.send(PlayerStarved { player_entity })
         }
     }
@@ -111,7 +111,7 @@ pub(super) fn add_boost_system(
 ) {
     for ate_event in player_ate_reader.iter(&player_ate_events) {
         if let Ok(mut boost_supply) = query.get_mut(ate_event.player_entity) {
-            println!("Adding extra time because player ate a worm.");
+            debug!("Adding extra time because player ate a worm.");
             boost_supply.add_boost();
         }
     }

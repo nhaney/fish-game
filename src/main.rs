@@ -19,6 +19,10 @@ fn main() {
         mode: WindowMode::Windowed,
         ..Default::default()
     })
+    .add_resource(bevy::log::LogSettings {
+        level: bevy::log::Level::DEBUG,
+        filter: "wgpu=error,bevy_webgl2=warn,bevy_ecs=info".to_string(),
+    })
     .add_resource(bevy::render::pass::ClearColor(Color::rgb_u8(230, 202, 173)))
     .add_plugins(DefaultPlugins);
 

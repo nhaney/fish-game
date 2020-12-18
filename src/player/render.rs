@@ -86,7 +86,7 @@ pub(super) fn player_state_animation_change_system(
         let cur_player_state = &player_state.current_state;
         if let Some(prev_player_state) = last_entity_states.get(&entity) {
             if cur_player_state != prev_player_state {
-                // println!(
+                // debug!(
                 //     "State change detected in animation system from {:?} to {:?}",
                 //     prev_player_state, cur_player_state
                 // );
@@ -132,7 +132,7 @@ pub(super) fn spawn_player_boost_trackers(
     let pink_color = materials.add(Color::PINK.into());
     let hot_pink_color = materials.add(Color::rgb_u8(255, 105, 180).into());
 
-    println!("Adding boost trackers for player {:?}...", player_entity);
+    debug!("Adding boost trackers for player {:?}...", player_entity);
 
     let extended_width = player_width;
     let tracker_height = player_height;
@@ -188,7 +188,7 @@ pub(super) fn spawn_player_boost_trackers(
         boost_trackers.push(tracker);
     }
 
-    println!("Added boost tracker entities: {:?}", boost_trackers);
+    debug!("Added boost tracker entities: {:?}", boost_trackers);
 
     commands.insert_one(
         player_entity,

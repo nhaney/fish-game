@@ -19,7 +19,7 @@ impl GameState {
     fn transition(&mut self, dest_state: GameStates) {
         self.prev_state = self.cur_state;
         self.cur_state = dest_state;
-        println!(
+        debug!(
             "Game state transitioned from {:?} to {:?}",
             self.prev_state, self.cur_state
         );
@@ -96,12 +96,12 @@ pub(super) fn increment_score_system(
 
     if score.timer.finished() {
         score.count += 1;
-        println!("Score: {:?}", score.count);
+        debug!("Score: {:?}", score.count);
     }
 
     for _ in player_ate_reader.iter(&player_ate_events) {
         score.count += SCORE_PER_WORM as u32;
-        println!("Score: {:?}", score.count);
+        debug!("Score: {:?}", score.count);
     }
 }
 
@@ -111,7 +111,7 @@ pub(super) fn finalize_score(
     game_over_events: Res<Events<GameOver>>,
 ) {
     if let Some(_game_over_event) = game_over_reader.earliest(&game_over_events) {
-        println!("Final score: {:?}", score.count);
+        debug!("Final score: {:?}", score.count);
     }
 }
 
@@ -127,7 +127,7 @@ pub(super) fn end_game_system(
     hook_query: Query<(&Hook, &Parent)>,
 ) {
     for hook_event in player_hooked_reader.iter(&player_hooked_events) {
-        println!("Ending game because the player got hooked.");
+        debug!("Ending game because the player got hooked.");
         let (_, winning_boat) = hook_query.get(hook_event.hook_entity).unwrap();
         game_over_events.send(GameOver {
             winning_boat: Some(winning_boat.0),
@@ -136,13 +136,13 @@ pub(super) fn end_game_system(
     }
 
     for _ in player_starved_reader.iter(&player_starved_events) {
-        println!("Ending game because the player starved.");
+        debug!("Ending game because the player starved.");
         game_over_events.send(GameOver { winning_boat: None });
         game_state.transition(GameStates::GameOver);
     }
 
     for bonked_event in player_bonked_reader.iter(&player_bonked_events) {
-        println!("Ending game because the player bonked.");
+        debug!("Ending game because the player bonked.");
         game_over_events.send(GameOver {
             winning_boat: Some(bonked_event.boat_entity),
         });
@@ -156,7 +156,7 @@ pub(super) fn reset_difficulty_on_restart(
     mut restart_reader: Local<EventReader<GameRestarted>>,
 ) {
     if let Some(_) = restart_reader.earliest(&restart_events) {
-        println!("Resetting difficulty after restart");
+        debug!("Resetting difficulty after restart");
         difficulty.multiplier = 1;
         difficulty.timer = Timer::from_seconds(10.0, true);
     }
@@ -168,7 +168,7 @@ pub(super) fn reset_score_on_restart(
     mut restart_reader: Local<EventReader<GameRestarted>>,
 ) {
     if let Some(_) = restart_reader.earliest(&restart_events) {
-        println!("Resetting score after restart");
+        debug!("Resetting score after restart");
         score.count = 0;
         score.timer = Timer::from_seconds(1.0, true);
     }
@@ -180,7 +180,7 @@ pub(super) fn reset_game_state_on_restart(
     mut restart_reader: Local<EventReader<GameRestarted>>,
 ) {
     if let Some(_) = restart_reader.earliest(&restart_events) {
-        println!("Resetting game state after restart");
+        debug!("Resetting game state after restart");
         game_state.cur_state = GameStates::Running;
         game_state.prev_state = GameStates::Running;
     }

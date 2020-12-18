@@ -13,7 +13,7 @@ pub struct SharedPlugin;
 
 impl Plugin for SharedPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        println!("Building shared plugin...");
+        debug!("Building shared plugin...");
         // Setup stages
         app.add_stage_after(
             stage::PRE_UPDATE,
@@ -118,7 +118,7 @@ impl Plugin for SharedPlugin {
         .add_system_to_stage(stages::PREPARE_RENDER, game::unpause_game.system());
 
         // if cfg!(debug_assertions) {
-        //     println!("Adding diagnostic plugins for debug mode...");
+        //     debug!("Adding diagnostic plugins for debug mode...");
         //     app.add_plugin(PrintDiagnosticsPlugin::default())
         //         .add_plugin(FrameTimeDiagnosticsPlugin::default());
         // }

@@ -17,7 +17,7 @@ impl FromResources for PauseButtonMaterials {
         let asset_server = resources.get::<AssetServer>().unwrap();
         let mut materials = resources.get_mut::<Assets<ColorMaterial>>().unwrap();
 
-        println!("Loading pause button materials...");
+        debug!("Loading pause button materials...");
         PauseButtonMaterials {
             pause: materials.add(asset_server.load("sprites/ui/pause.png").into()),
             play: materials.add(asset_server.load("sprites/ui/play.png").into()),
