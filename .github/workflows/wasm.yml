@@ -19,5 +19,7 @@ jobs:
                   cargo install wasm-bindgen-cli
             - name: Build wasm release
               run: python -m doit build-wasm-release
-            - name: Finish
-              run: echo "Finished workflow successfully!"
+            - uses: actions/upload-artifact@v2
+              with:
+                name: wasm-page 
+                path: build-wasm.zip

@@ -6,9 +6,6 @@ use std::{
     io::{Read, Write},
 };
 
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
-
 use bevy::prelude::*;
 
 use crate::shared::{

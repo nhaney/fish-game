@@ -78,6 +78,18 @@ def build(is_release: bool, is_wasm: bool) -> dict:
                 target,
             ]
         )
+
+        actions.append(
+            [
+                "zip",
+                "build-wasm.zip",
+                "index.html",
+                "target/fish-game.js",
+                "target/fish-game_bg.wasm",
+                "-r",
+                "assets"
+            ]
+        )
     else:
         actions[0] += ["--features", "native"]
 
