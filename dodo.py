@@ -78,6 +78,8 @@ def build(is_release: bool, is_wasm: bool) -> dict:
                 target,
             ]
         )
+    else:
+        actions[0] += ["--features", "native"]
 
     if is_release:
         actions[0] += ["--release"]
@@ -115,15 +117,19 @@ def task_run_wasm_release() -> dict:
 
 
 def run_game(is_release: bool, is_wasm: bool) -> dict:
+    target = get_build_target(is_release, is_wasm)
+
     if is_wasm:
         cmd = ["python3", "-m", "http.server"]
     else:
-        cmd = ["cargo", "run"]
+        cmd = ["cargo", "run", "--features", "native"]
         if is_release:
             cmd.append("--release")
 
     return {
         "actions": [cmd],
+        "file_dep": [target],
+        "uptodate": [False],
     }
 
 

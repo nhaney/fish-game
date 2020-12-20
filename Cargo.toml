@@ -12,7 +12,6 @@ default = [
   "bevy/png",
   "bevy/bevy_audio",
   "bevy/vorbis",
-  "native",
 ]
 
 # different rendering for native vs. web, no official bevy support
