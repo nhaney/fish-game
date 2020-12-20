@@ -30,11 +30,16 @@
 - [ ]  Power-ups (Invincibility, life vest)
 
 ## Goal List - week of 12/14
-- [ ] More ergonomic build commands for native/web dev and deploy builds
-- [ ] Draw fishing poles + rods
-- [ ] Add audio - might be hard on WASM?
+- [x] More ergonomic build commands for native/web dev and deploy builds
+- [x] Draw fishing poles + rods
+- [x] Add audio - might be hard on WASM?
 - [ ] Clean up code/warnings
 - [ ] Build + deploy pipeline/workflow to put WASM build on my site
+  - Use Github actions
+    - On push, run tests, linting, and format check
+    - On tag, run the above and do a release on github with native build (linux for now) and 
+the wasm build
+    - After making a release, pull down and add to site and push to netlify
 - [ ] Balance difficulty
 - [x] Update bevy version
   x Update system syntax
