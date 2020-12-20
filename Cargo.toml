@@ -5,7 +5,6 @@ authors = ["Nigel Haney <nigel.haney27@gmail.com>"]
 edition = "2018"
 
 [features]
-# bevy features
 default = [
   "bevy/bevy_gltf",
   "bevy/bevy_winit",
@@ -13,6 +12,7 @@ default = [
   "bevy/png",
   "bevy/bevy_audio",
   "bevy/vorbis",
+  "native",
 ]
 
 # different rendering for native vs. web, no official bevy support

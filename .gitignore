@@ -2,3 +2,4 @@
 scores.json
 .doit.db
 __pycache__
+.vim
