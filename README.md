@@ -1,5 +1,3 @@
-![CI](https://github.com/nhaney/fish-game/workflows/.github/workflows/ci.yml/badge.svg)
-
 # Stay Off the Line! Remastered
 
 ![](assets/sprites/player/fish1.png)
@@ -12,7 +10,7 @@ I made for the 2018 [js13k](https://js13kgames.com/) game jam.
 This game is written using Rust using the fledgling but powerful [Bevy game engine](https://github.com/bevyengine/bevy).
 
 One of the goals of this project is keeping this repo up to date with the latest versions of Bevy as the 
-project keeps evolving,to be an example of a slightly complicated cross platform game running on this engine.
+project keeps evolving, in order to be an example of a slightly complicated cross platform game running on this engine.
 
 Play a WASM build of this game on your browser [here](https://nigelhaney.com/fish-game).
 
