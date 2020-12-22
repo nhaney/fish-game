@@ -14,6 +14,8 @@ fn main() {
         title: "Stay Off the Line!".to_string(),
         width: 1280.0,
         height: 720.0,
+        #[cfg(target_arch = "wasm32")]
+        canvas: Some("#fish-game".to_string()),
         vsync: false,
         resizable: true,
         mode: WindowMode::Windowed,

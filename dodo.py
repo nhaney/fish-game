@@ -83,11 +83,10 @@ def build(is_release: bool, is_wasm: bool) -> dict:
             [
                 "zip",
                 "build-wasm.zip",
-                "index.html",
                 "target/fish-game.js",
                 "target/fish-game_bg.wasm",
                 "-r",
-                "assets"
+                "assets",
             ]
         )
     else:
