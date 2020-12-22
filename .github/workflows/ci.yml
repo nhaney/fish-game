@@ -1,5 +1,4 @@
 # runs quality checks and, if successful, uploads an artifact of the built wasm and native games
-
 name: CI
 on: [push]
 
@@ -44,7 +43,7 @@ jobs:
               run: python -m doit build-wasm-release
             - uses: actions/upload-artifact@v2
               with:
-                name: wasm-release
+                name: stay-off-the-line-remastered-WASM-release-${GITHUB_SHA}
                 path: dist/wasm/
 
     make-native-artifact:
@@ -73,6 +72,6 @@ jobs:
               run: python -m doit build-native-release
             - uses: actions/upload-artifact@v2
               with:
-                name: ${{ runner.os }}-release
+                name: stay-off-the-line-remastered-${{ runner.os }}-release-${GITHUB_SHA}
                 path: dist/native/
 

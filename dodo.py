@@ -84,9 +84,9 @@ def build(is_release: bool, is_wasm: bool) -> dict:
             actions.append(
                 [
                     "cp",
+                    "-r",
                     "target/fish-game.js",
                     "target/fish-game_bg.wasm",
-                    "-r",
                     "assets",
                     "dist/wasm/",
                 ]
@@ -100,8 +100,8 @@ def build(is_release: bool, is_wasm: bool) -> dict:
             actions.append(
                 [
                     "cp",
-                    "target/release/fish-game",
                     "-r",
+                    "target/release/fish-game",
                     "assets",
                     "dist/native/",
                 ]
