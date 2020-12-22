@@ -1,3 +1,5 @@
+![CI](https://github.com/nhaney/fish-game/workflows/.github/workflows/ci.yml/badge.svg)
+
 # Stay Off the Line! Remastered
 
 ![](assets/sprites/player/fish1.png)
