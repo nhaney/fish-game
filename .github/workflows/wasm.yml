@@ -1,7 +1,30 @@
-name: wasm
+# runs quality checks and, if successful, uploads an artifact of the built wasm and native games
+
+name: CI
 on: [push]
+
 jobs: 
-    release-wasm:
+    check:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions/setup-python@v1
+            - uses: actions-rs/toolchain@v1
+              with:
+                toolchain: stable
+                target: wasm32-unknown-unknown
+                override: true
+            - name: Install system dependencies 
+              run: sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev 
+            - name: Install build dependencies
+              run: |
+                  pip install --user doit
+                  cargo install wasm-bindgen-cli
+            - name: Run code quality checks and tests
+              run: python -m doit check
+
+    make-wasm-artifact:
+        needs: check
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
@@ -21,5 +44,35 @@ jobs:
               run: python -m doit build-wasm-release
             - uses: actions/upload-artifact@v2
               with:
-                name: wasm-page 
-                path: build-wasm.zip
+                name: wasm-release
+                path: dist/wasm/
+
+    make-native-artifact:
+        strategy:
+            matrix:
+                os: [windows-2019, ubuntu-20.04, macos-10.15]
+        needs: check
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions/setup-python@v1
+            - uses: actions-rs/toolchain@v1
+              with:
+                toolchain: stable
+                override: true
+
+            - name: Install linux system dependencies 
+              run: sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev 
+              if: ${{ runner.os == 'Linux' }}
+
+            - name: Install build dependencies
+              run: |
+                  pip install --user doit
+
+            - name: Build native release
+              run: python -m doit build-native-release
+            - uses: actions/upload-artifact@v2
+              with:
+                name: ${{ runner.os }}-release
+                path: dist/native/
+

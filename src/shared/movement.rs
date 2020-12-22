@@ -84,10 +84,8 @@ pub fn follow_system(
             if let Ok(target_transform) = global_transform_query.get(follow_data.entity_to_follow) {
                 follower_transform.translation = target_transform.translation + follow_data.offset;
             }
-        } else {
-            if let Ok(target_transform) = transform_query.get(follow_data.entity_to_follow) {
-                follower_transform.translation = target_transform.translation + follow_data.offset;
-            }
+        } else if let Ok(target_transform) = transform_query.get(follow_data.entity_to_follow) {
+            follower_transform.translation = target_transform.translation + follow_data.offset;
         }
     }
 }

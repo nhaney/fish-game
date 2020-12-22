@@ -61,7 +61,7 @@ pub(super) fn add_local_leaderboard_nodes(
                 ..Default::default()
             },
             text: Text {
-                value: format!("High scores:"),
+                value: "High scores:".to_string(),
                 font: fonts.main_font.clone(),
                 style: TextStyle {
                     font_size: 35.0,
@@ -79,8 +79,8 @@ pub(super) fn add_local_leaderboard_nodes(
         .current_entity()
         .unwrap();
 
-    for i in 0..SCORES_TO_SHOW {
-        score_nodes[i] = commands
+    for (i, score_node) in score_nodes.iter_mut().enumerate().take(SCORES_TO_SHOW) {
+        *score_node = commands
             .spawn(TextBundle {
                 style: Style {
                     margin: Rect {
@@ -183,7 +183,7 @@ pub(super) fn hide_high_scores_on_restart(
     high_score_display: Res<HighScoreDisplay>,
     high_score_visibility_query: Query<&mut Visible, With<HighScoreDisplayNode>>,
 ) {
-    if let Some(_) = restart_reader.earliest(&restart_events) {
+    if restart_reader.earliest(&restart_events).is_some() {
         change_visibility_of_scoreboard(false, &high_score_display, high_score_visibility_query);
     }
 }

@@ -44,7 +44,6 @@ pub(super) fn add_game_over_text(
                                 vertical: VerticalAlign::Center,
                                 horizontal: HorizontalAlign::Center,
                             },
-                            ..Default::default()
                         },
                     },
                     visible: Visible {
@@ -74,7 +73,6 @@ pub(super) fn add_game_over_text(
                                         vertical: VerticalAlign::Center,
                                         horizontal: HorizontalAlign::Center,
                                     },
-                                    ..Default::default()
                                 },
                             },
                             visible: Visible {
@@ -92,6 +90,9 @@ pub(super) fn add_game_over_text(
     root_game_over_node
 }
 
+// TODO: Refactor to use types to reduce complexity
+#[allow(clippy::type_complexity)]
+#[allow(clippy::too_many_arguments)]
 pub(super) fn show_game_over_text(
     mut player_hooked_reader: Local<EventReader<PlayerHooked>>,
     player_hooked_events: Res<Events<PlayerHooked>>,
@@ -109,19 +110,28 @@ pub(super) fn show_game_over_text(
     >,
 ) {
     let mut game_over_message = "".to_string();
-    if let Some(_) = player_hooked_reader.earliest(&player_hooked_events) {
+    if player_hooked_reader
+        .earliest(&player_hooked_events)
+        .is_some()
+    {
         game_over_message = "HOOKED!".to_string();
     }
 
-    if let Some(_) = player_bonked_reader.earliest(&player_bonked_events) {
+    if player_bonked_reader
+        .earliest(&player_bonked_events)
+        .is_some()
+    {
         game_over_message = "BONKED!".to_string();
     }
 
-    if let Some(_) = player_starved_reader.earliest(&player_starved_events) {
+    if player_starved_reader
+        .earliest(&player_starved_events)
+        .is_some()
+    {
         game_over_message = "STARVED!".to_string();
     }
 
-    if game_over_message != "".to_string() {
+    if game_over_message != *"" {
         for (mut game_over_draw, mut game_over_text) in game_over_text_query.iter_mut() {
             game_over_text.value = game_over_message.clone();
             game_over_draw.is_visible = true;
@@ -133,6 +143,9 @@ pub(super) fn show_game_over_text(
     }
 }
 
+// TODO: Refactor to use types to reduce complexity
+#[allow(clippy::type_complexity)]
+#[allow(clippy::too_many_arguments)]
 pub(super) fn clear_game_over_message_on_restart(
     restart_events: Res<Events<GameRestarted>>,
     mut restart_reader: Local<EventReader<GameRestarted>>,
@@ -142,7 +155,7 @@ pub(super) fn clear_game_over_message_on_restart(
         (Without<GameOverText>, With<Parent>, With<RestartText>),
     >,
 ) {
-    if let Some(_) = restart_reader.earliest(&restart_events) {
+    if restart_reader.earliest(&restart_events).is_some() {
         debug!("Clearing game over text after game was restarted.");
         for mut game_over_draw in game_over_text_query.iter_mut() {
             game_over_draw.is_visible = false;

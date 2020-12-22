@@ -78,7 +78,7 @@ pub(super) fn change_color_on_game_over(
     mut game_over_reader: Local<EventReader<GameOver>>,
     mut score_text_query: Query<&mut Text, With<ScoreText>>,
 ) {
-    if let Some(_) = game_over_reader.earliest(&game_over_events) {
+    if game_over_reader.earliest(&game_over_events).is_some() {
         for mut score_text in score_text_query.iter_mut() {
             score_text.style.color = Color::RED;
         }
@@ -90,7 +90,7 @@ pub(super) fn revert_color_on_restart(
     mut restart_reader: Local<EventReader<GameRestarted>>,
     mut score_text_query: Query<&mut Text, With<ScoreText>>,
 ) {
-    if let Some(_) = restart_reader.earliest(&restart_events) {
+    if restart_reader.earliest(&restart_events).is_some() {
         for mut score_text in score_text_query.iter_mut() {
             score_text.style.color = Color::GREEN;
         }

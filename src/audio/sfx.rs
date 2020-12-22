@@ -23,6 +23,8 @@ impl FromResources for SfxHandles {
     }
 }
 
+// TODO: See if this can be reduced
+#[allow(clippy::too_many_arguments)]
 pub(super) fn play_sfx_system(
     mut player_hooked_reader: Local<EventReader<PlayerHooked>>,
     player_hooked_events: Res<Events<PlayerHooked>>,

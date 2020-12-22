@@ -44,10 +44,10 @@ pub(super) fn pause_button_system(
     for (interaction, mut material, mut pause_button) in interaction_query.iter_mut() {
         if let Interaction::Clicked = *interaction {
             if pause_button.is_paused {
-                *material = pause_button_materials.pause.clone().into();
+                *material = pause_button_materials.pause.clone();
                 game_unpaused_events.send(GameUnpaused);
             } else {
-                *material = pause_button_materials.play.clone().into();
+                *material = pause_button_materials.play.clone();
                 game_paused_events.send(GamePaused);
             }
 
@@ -103,9 +103,9 @@ pub(super) fn reset_pause_button_on_restart(
     pause_button_materials: Res<PauseButtonMaterials>,
     mut pause_button_query: Query<(&mut Handle<ColorMaterial>, &mut PauseButton)>,
 ) {
-    if let Some(_) = restart_reader.earliest(&restart_events) {
+    if restart_reader.earliest(&restart_events).is_some() {
         for (mut material, mut pause_button) in pause_button_query.iter_mut() {
-            *material = pause_button_materials.pause.clone().into();
+            *material = pause_button_materials.pause.clone();
             pause_button.is_paused = false;
         }
     }

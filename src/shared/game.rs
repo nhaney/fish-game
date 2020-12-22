@@ -115,6 +115,8 @@ pub(super) fn finalize_score(
     }
 }
 
+// TODO: Combine event types to reduce number of arguments
+#[allow(clippy::too_many_arguments)]
 pub(super) fn end_game_system(
     mut player_hooked_reader: Local<EventReader<PlayerHooked>>,
     player_hooked_events: Res<Events<PlayerHooked>>,
@@ -155,7 +157,7 @@ pub(super) fn reset_difficulty_on_restart(
     restart_events: Res<Events<GameRestarted>>,
     mut restart_reader: Local<EventReader<GameRestarted>>,
 ) {
-    if let Some(_) = restart_reader.earliest(&restart_events) {
+    if restart_reader.earliest(&restart_events).is_some() {
         debug!("Resetting difficulty after restart");
         difficulty.multiplier = 1;
         difficulty.timer = Timer::from_seconds(10.0, true);
@@ -167,7 +169,7 @@ pub(super) fn reset_score_on_restart(
     restart_events: Res<Events<GameRestarted>>,
     mut restart_reader: Local<EventReader<GameRestarted>>,
 ) {
-    if let Some(_) = restart_reader.earliest(&restart_events) {
+    if restart_reader.earliest(&restart_events).is_some() {
         debug!("Resetting score after restart");
         score.count = 0;
         score.timer = Timer::from_seconds(1.0, true);
@@ -179,7 +181,7 @@ pub(super) fn reset_game_state_on_restart(
     restart_events: Res<Events<GameRestarted>>,
     mut restart_reader: Local<EventReader<GameRestarted>>,
 ) {
-    if let Some(_) = restart_reader.earliest(&restart_events) {
+    if restart_reader.earliest(&restart_events).is_some() {
         debug!("Resetting game state after restart");
         game_state.cur_state = GameStates::Running;
         game_state.prev_state = GameStates::Running;
@@ -191,7 +193,7 @@ pub(super) fn pause_game(
     pause_events: Res<Events<GamePaused>>,
     mut pause_reader: Local<EventReader<GamePaused>>,
 ) {
-    if let Some(_) = pause_reader.earliest(&pause_events) {
+    if pause_reader.earliest(&pause_events).is_some() {
         game_state.transition(GameStates::Paused);
     }
 }
@@ -201,7 +203,7 @@ pub(super) fn unpause_game(
     unpause_events: Res<Events<GameUnpaused>>,
     mut unpause_reader: Local<EventReader<GameUnpaused>>,
 ) {
-    if let Some(_) = unpause_reader.earliest(&unpause_events) {
+    if unpause_reader.earliest(&unpause_events).is_some() {
         let prev_state = game_state.prev_state;
         game_state.transition(prev_state);
     }

@@ -57,11 +57,11 @@ impl FromResources for PlayerStateAnimations {
                         should_loop: true,
                         frames: vec![
                             AnimationFrame {
-                                material_handle: swim_1_handle.clone(),
+                                material_handle: swim_1_handle,
                                 time: 0.1,
                             },
                             AnimationFrame {
-                                material_handle: swim_2_handle.clone(),
+                                material_handle: swim_2_handle,
                                 time: 0.1,
                             },
                         ],
@@ -231,7 +231,7 @@ pub(super) fn despawn_trackers_on_gameover_or_restart(
     boost_tracker_query: Query<Entity, With<BoostTracker>>,
     player_query: Query<Entity, With<BoostTrackerDisplay>>,
 ) {
-    if let Some(_) = game_over_reader.earliest(&game_over_events) {
+    if game_over_reader.earliest(&game_over_events).is_some() {
         for boost_tracker in boost_tracker_query.iter() {
             commands.despawn_recursive(boost_tracker);
         }
@@ -241,7 +241,10 @@ pub(super) fn despawn_trackers_on_gameover_or_restart(
         }
     }
 
-    if let Some(_) = game_restarted_reader.earliest(&game_restarted_events) {
+    if game_restarted_reader
+        .earliest(&game_restarted_events)
+        .is_some()
+    {
         for boost_tracker in boost_tracker_query.iter() {
             commands.despawn_recursive(boost_tracker);
         }

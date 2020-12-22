@@ -110,7 +110,7 @@ impl LocalScores {
     }
 
     pub fn high_score(&self) -> Option<u32> {
-        if self.scores.len() == 0 {
+        if self.scores.is_empty() {
             None
         } else {
             Some(self.scores[0])

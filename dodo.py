@@ -43,7 +43,7 @@ def task_build_native() -> dict:
 
 
 @convert_to_kebab
-def task_build_release() -> dict:
+def task_build_native_release() -> dict:
     """Builds release native binary"""
     return build(is_release=True, is_wasm=False)
 
@@ -79,18 +79,33 @@ def build(is_release: bool, is_wasm: bool) -> dict:
             ]
         )
 
-        actions.append(
-            [
-                "zip",
-                "build-wasm.zip",
-                "target/fish-game.js",
-                "target/fish-game_bg.wasm",
-                "-r",
-                "assets",
-            ]
-        )
+        if is_release:
+            actions.append(["mkdir", "-p", "dist/wasm"])
+            actions.append(
+                [
+                    "cp",
+                    "target/fish-game.js",
+                    "target/fish-game_bg.wasm",
+                    "-r",
+                    "assets",
+                    "dist/wasm/",
+                ]
+            )
     else:
         actions[0] += ["--features", "native"]
+
+        # copy built files to dist directory if this is a release build
+        if is_release:
+            actions.append(["mkdir", "-p", "dist/native"])
+            actions.append(
+                [
+                    "cp",
+                    "target/release/fish-game",
+                    "-r",
+                    "assets",
+                    "dist/native/",
+                ]
+            )
 
     if is_release:
         actions[0] += ["--release"]
@@ -154,7 +169,16 @@ def task_test() -> dict:
 def task_lint() -> dict:
     """Runs linting"""
     return {
-        "actions": [["cargo", "clippy", "--color", "always"]],
+        "actions": [
+            [
+                "cargo",
+                "clippy",
+                "--color",
+                "always",
+                "--features",
+                "native",
+            ],
+        ],
     }
 
 
@@ -175,8 +199,11 @@ def task_check():
     return {
         "actions": [
             ["cargo", "fmt", "--", "--check"],
-            CmdAction(["cargo", "clippy", "--color", "always"], env=cur_env),
-            ["cargo", "test"],
+            CmdAction(
+                ["cargo", "clippy", "--color", "always", "--features", "native"],
+                env=cur_env,
+            ),
+            ["cargo", "test", "--features", "native"],
         ],
         "file_dep": get_src_files(),
     }

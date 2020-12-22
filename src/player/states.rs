@@ -72,6 +72,8 @@ impl PlayerState {
     Start a boost in the direction the player is trying to move. If they are not moving, boost in
     the direction they are facing. Changes the state and starts the boost cooldown.
     */
+    // TODO: Reduce complexity
+    #[allow(clippy::clippy::too_many_arguments)]
     pub(super) fn start_boost(
         &mut self,
         commands: &mut Commands,

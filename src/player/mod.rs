@@ -115,7 +115,7 @@ fn reset_player(
     mut restart_reader: Local<EventReader<GameRestarted>>,
     player_query: Query<Entity, With<attributes::Player>>,
 ) {
-    if let Some(_) = restart_reader.earliest(&restart_events) {
+    if restart_reader.earliest(&restart_events).is_some() {
         debug!("Despawning current player entity and creating a new one.");
         let player_entity = player_query.iter().next().unwrap();
         // despawn current player

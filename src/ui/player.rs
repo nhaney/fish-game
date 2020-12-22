@@ -67,8 +67,7 @@ pub(super) fn reposition_countdown_text_system(
 ) {
     let (_, camera_transform) = camera_query
         .iter()
-        .filter(|(camera, _)| camera.name == Some(CAMERA_2D.to_string()))
-        .next()
+        .find(|(camera, _)| camera.name == Some(CAMERA_2D.to_string()))
         .unwrap();
 
     let window = windows.get_primary().unwrap();
@@ -97,7 +96,7 @@ pub(super) fn hide_countdown_on_game_over(
     mut game_over_reader: Local<EventReader<GameOver>>,
     mut countdown_text_query: Query<&mut Visible, With<PlayerCountdownText>>,
 ) {
-    if let Some(_) = game_over_reader.earliest(&game_over_events) {
+    if game_over_reader.earliest(&game_over_events).is_some() {
         for mut countdown_text_visiblity in countdown_text_query.iter_mut() {
             countdown_text_visiblity.is_visible = false;
         }
@@ -109,7 +108,7 @@ pub(super) fn show_countdown_on_restart(
     mut restart_reader: Local<EventReader<GameRestarted>>,
     mut countdown_text_query: Query<&mut Visible, With<PlayerCountdownText>>,
 ) {
-    if let Some(_) = restart_reader.earliest(&restart_events) {
+    if restart_reader.earliest(&restart_events).is_some() {
         for mut countdown_text_visiblity in countdown_text_query.iter_mut() {
             countdown_text_visiblity.is_visible = true;
         }

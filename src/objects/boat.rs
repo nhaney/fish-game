@@ -85,32 +85,32 @@ fn boat_stats_factory(difficulty: u8, rng: &mut ChaCha8Rng) -> BoatStats {
         BoatTypes::Dinghy => BoatStats {
             num_poles: 1,
             speed: (rng.gen_range(30, 40) + (5 * difficulty)) as f32,
-            width: 45 as f32,
-            height: 10 as f32,
+            width: 45.0,
+            height: 10.0,
             worm_chance: 0.5,
             boat_type,
         },
         BoatTypes::Fishingboat => BoatStats {
             num_poles: rng.gen_range(1, 3) + difficulty,
             speed: (rng.gen_range(40, 50) + (5 * difficulty)) as f32,
-            width: 65 as f32,
-            height: 24 as f32,
+            width: 65.0,
+            height: 24.0,
             worm_chance: 0.8,
             boat_type,
         },
         BoatTypes::Speedboat => BoatStats {
             num_poles: rng.gen_range(1, 2) + difficulty,
             speed: (rng.gen_range(75, 100) + (5 * difficulty)) as f32,
-            width: 75 as f32,
-            height: 16 as f32,
+            width: 75.0,
+            height: 16.0,
             worm_chance: 0.4,
             boat_type,
         },
         BoatTypes::Yacht => BoatStats {
             num_poles: rng.gen_range(3, 6) + difficulty,
             speed: (rng.gen_range(60, 75) + (5 * difficulty)) as f32,
-            width: 128 as f32,
-            height: 64 as f32,
+            width: 128.0,
+            height: 64.0,
             worm_chance: 0.25,
             boat_type,
         },
@@ -137,6 +137,8 @@ pub(super) struct BoatSpawner {
     pub spawn_timer: Timer,
 }
 
+// TODO: See if this can be reduced
+#[allow(clippy::too_many_arguments)]
 pub(super) fn boat_spawner_system(
     mut commands: &mut Commands,
     time: Res<Time>,
@@ -205,9 +207,6 @@ fn spawn_boat(
         0.0,
     );
 
-    // let boat_material = materials.add(Color::rgb(rng.gen(), rng.gen(), rng.gen()).into());
-    let boat_material = boat_materials.boat.clone();
-
     // spawn boat
     commands
         .spawn((
@@ -221,7 +220,7 @@ fn spawn_boat(
             RenderLayer::Objects,
         ))
         .with_bundle(SpriteBundle {
-            material: boat_material.clone(),
+            material: boat_materials.boat.clone(),
             sprite: Sprite::new(Vec2::new(stats.width, stats.height)),
             transform: Transform {
                 translation: boat_start_pos,
@@ -332,7 +331,7 @@ fn spawn_lines(
             .unwrap();
 
         // spawn the hook at the end point of the line
-        let mut hook_point = line_end_point.clone();
+        let mut hook_point = line_end_point;
         hook_point.y -= HOOK_SIZE / 2.0;
 
         parent
@@ -468,7 +467,7 @@ pub(super) fn despawn_worms_on_game_over(
     game_over_events: Res<Events<GameOver>>,
     query: Query<Entity, With<Worm>>,
 ) {
-    if let Some(_) = game_over_reader.earliest(&game_over_events) {
+    if game_over_reader.earliest(&game_over_events).is_some() {
         for worm_entity in query.iter() {
             commands.despawn_recursive(worm_entity);
         }
@@ -497,7 +496,7 @@ pub(super) fn reset_boats_on_restart(
     mut restart_reader: Local<EventReader<GameRestarted>>,
     boat_query: Query<Entity, With<Boat>>,
 ) {
-    if let Some(_) = restart_reader.earliest(&restart_events) {
+    if restart_reader.earliest(&restart_events).is_some() {
         debug!("Despawning all boats and restarting spawner because of restart event.");
         // despawn all boats
         for boat_entity in boat_query.iter() {
@@ -512,6 +511,8 @@ pub(super) fn reset_boats_on_restart(
     1. Attach player as a child entity of the hook and remove the player's velocity
     2. Give the hook a velocity and destination
 */
+// TODO: Refactor to use a predefined type?
+#[allow(clippy::type_complexity)]
 pub(super) fn player_hooked_handler(
     commands: &mut Commands,
     mut player_hooked_reader: Local<EventReader<PlayerHooked>>,

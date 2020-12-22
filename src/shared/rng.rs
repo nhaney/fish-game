@@ -29,7 +29,7 @@ pub(super) fn reset_rng_on_restart(
     restart_events: Res<Events<GameRestarted>>,
     mut restart_reader: Local<EventReader<GameRestarted>>,
 ) {
-    if let Some(_) = restart_reader.earliest(&restart_events) {
+    if restart_reader.earliest(&restart_events).is_some() {
         let mut seed: <ChaCha8Rng as SeedableRng>::Seed = Default::default();
         thread_rng().fill(&mut seed);
 
