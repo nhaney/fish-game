@@ -2,59 +2,61 @@
 name = "fish-game"
 version = "0.1.0"
 authors = ["Nigel Haney <nigel.haney27@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [features]
-default = [
-  "bevy/bevy_gltf",
-  "bevy/bevy_winit",
-  "bevy/render",
-  "bevy/png",
-  "bevy/bevy_audio",
-  "bevy/vorbis",
-]
+#default = [
+#  "bevy/bevy_gltf",
+#  "bevy/bevy_winit",
+#  "bevy/render",
+#  "bevy/png",
+#  "bevy/bevy_audio",
+#  "bevy/vorbis",
+#]
 
 # different rendering for native vs. web, no official bevy support
-native = [
-  "bevy/bevy_wgpu",
-]
+#native = [
+#  "bevy/bevy_wgpu",
+#]
 
-web = [
-  "bevy_webgl2"
-]
+#web = [
+#  "bevy_webgl2"
+#]
 
 [dependencies]
-bevy = {git = "https://github.com/bevyengine/bevy", rev="841755aaf23acfd55b375c37390daeb302c5b30b", default-features=false}
-bevy_webgl2 = {git = "https://github.com/mrk-its/bevy_webgl2", rev="bfc10323a37cfd98aba95f6b44e902f8ef5daae7", optional=true}
-bevy_prototype_lyon = { git = "https://github.com/nhaney/bevy_prototype_lyon", branch = "master"}
+bevy = "0.13.2"
+
+#bevy = { git = "https://github.com/bevyengine/bevy", rev = "841755aaf23acfd55b375c37390daeb302c5b30b", default-features = false }
+#bevy_webgl2 = {git = "https://github.com/mrk-its/bevy_webgl2", rev="bfc10323a37cfd98aba95f6b44e902f8ef5daae7", optional=true}
+#bevy_prototype_lyon = { git = "https://github.com/nhaney/bevy_prototype_lyon", branch = "master"}
 
 rand = { version = "0.7", default-features = false }
 rand_chacha = "0.2.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-wasm-bindgen = "0.2.69"
+#wasm-bindgen = "0.2.69"
 
 # depedencies of bevy that need features enabled for web builds
-[dependencies.web-sys]
-version = "0.3.4"
-features = [
-  'Storage',
-  'Window',
-]
-
-[dependencies.rodio]
-git = "https://github.com/RustAudio/rodio"
-branch = "master"
-features = [
-    'vorbis',
-    'wasm-bindgen'
-]
-default-features = false
-
-[dependencies.winit]
-version = "0.24.0"
-features = ["web-sys", "x11"]
-default-features = false
+#[dependencies.web-sys]
+#version = "0.3.4"
+#features = [
+#  'Storage',
+#  'Window',
+#]
+#
+#[dependencies.rodio]
+#git = "https://github.com/RustAudio/rodio"
+#branch = "master"
+#features = [
+#    'vorbis',
+#    'wasm-bindgen'
+#]
+#default-features = false
+#
+#[dependencies.winit]
+#version = "0.24.0"
+#features = ["web-sys", "x11"]
+#default-features = false
 
 
 [profile.dev]
