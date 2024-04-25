@@ -13,7 +13,7 @@ use crate::shared::{
     stages,
 };
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Resource)]
 pub struct LocalScores {
     pub scores: Vec<u32>,
     // in case the filename is changed or something
@@ -117,7 +117,7 @@ impl LocalScores {
         }
     }
 
-    pub fn add_new_score(&mut self, score: u32, score_saved_events: &mut Events<ScoreSaved>) {
+    pub fn add_new_score(&mut self, score: u32, score_saved_events: &mut EventWriter<ScoreSaved>) {
         self.scores.push(score);
         self.scores.sort();
         self.scores.reverse();
@@ -136,7 +136,7 @@ impl Default for LocalScores {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Event)]
 pub struct ScoreSaved {
     score: u32,
     score_index: usize,
@@ -145,7 +145,7 @@ pub struct ScoreSaved {
 pub struct LeaderboardPlugin;
 
 impl Plugin for LeaderboardPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.init_resource::<LocalScores>()
             .add_system_to_stage(stages::HANDLE_EVENTS, update_local_scores_system.system())
             .add_event::<ScoreSaved>();
@@ -154,12 +154,11 @@ impl Plugin for LeaderboardPlugin {
 
 pub fn update_local_scores_system(
     score: Res<Score>,
-    mut game_over_reader: Local<EventReader<GameOver>>,
-    game_over_events: Res<Events<GameOver>>,
+    mut game_over_reader: EventReader<GameOver>,
     mut local_scores: ResMut<LocalScores>,
-    mut score_saved_events: ResMut<Events<ScoreSaved>>,
+    mut score_saved_events: EventWriter<ScoreSaved>,
 ) {
-    if let Some(_game_over_event) = game_over_reader.earliest(&game_over_events) {
+    if let Some(_game_over_event) = game_over_reader.read().next() {
         debug!(
             "Saving score new score ({:?}) to file {:?}",
             score.count, local_scores.lookup

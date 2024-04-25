@@ -8,12 +8,14 @@
         flake-utils = {
             url = "github:numtide/flake-utils";
         };
+        rust-overlay.url = "github:oxalica/rust-overlay";
     };
 
-    outputs = { nixpkgs, flake-utils, ... }:
+    outputs = { nixpkgs, flake-utils, rust-overlay, ... }:
         flake-utils.lib.eachDefaultSystem(system:
             let
-                pkgs = nixpkgs.legacyPackages.${system};
+                overlays = [ (import rust-overlay) ];
+                pkgs = import nixpkgs { inherit system overlays; };
             in
             {
                 packages = {
@@ -21,8 +23,7 @@
                 };
                 devShells.default = pkgs.mkShellNoCC rec {
                     packages = with pkgs; [
-                        cargo
-                        rustc
+                        rust-bin.beta.latest.default
 
                         pkg-config
 

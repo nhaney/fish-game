@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::player::events::{PlayerAte, PlayerBonked, PlayerBoosted, PlayerHooked, PlayerStarved};
 
+#[derive(Debug, Resource)]
 pub(super) struct SfxHandles {
     bonked: Handle<AudioSource>,
     hooked: Handle<AudioSource>,
@@ -10,9 +11,9 @@ pub(super) struct SfxHandles {
     boost: Handle<AudioSource>,
 }
 
-impl FromResources for SfxHandles {
-    fn from_resources(resources: &Resources) -> Self {
-        let asset_server = resources.get::<AssetServer>().unwrap();
+impl FromWorld for SfxHandles {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.get_resource_mut::<AssetServer>().unwrap();
         Self {
             bonked: asset_server.load("audio/sfx/bonked.ogg"),
             hooked: asset_server.load("audio/sfx/hooked.ogg"),
@@ -26,41 +27,52 @@ impl FromResources for SfxHandles {
 // TODO: See if this can be reduced
 #[allow(clippy::too_many_arguments)]
 pub(super) fn play_sfx_system(
-    mut player_hooked_reader: Local<EventReader<PlayerHooked>>,
-    player_hooked_events: Res<Events<PlayerHooked>>,
-    mut player_starved_reader: Local<EventReader<PlayerStarved>>,
-    player_starved_events: Res<Events<PlayerStarved>>,
-    mut player_bonked_reader: Local<EventReader<PlayerBonked>>,
-    player_bonked_events: Res<Events<PlayerBonked>>,
-    mut player_ate_reader: Local<EventReader<PlayerAte>>,
-    player_ate_events: Res<Events<PlayerAte>>,
-    mut player_boosted_reader: Local<EventReader<PlayerBoosted>>,
+    mut player_hooked_reader: EventReader<PlayerHooked>,
+    mut player_starved_reader: EventReader<PlayerStarved>,
+    mut player_bonked_reader: EventReader<PlayerBonked>,
+    mut player_ate_reader: EventReader<PlayerAte>,
+    mut player_boosted_reader: EventReader<PlayerBoosted>,
     player_boosted_events: Res<Events<PlayerBoosted>>,
     sfx_handles: Res<SfxHandles>,
-    audio: Res<Audio>,
+    mut commands: Commands,
 ) {
-    for _ in player_hooked_reader.iter(&player_hooked_events) {
+    for _ in player_hooked_reader.read() {
         debug!("Playing hooked sound effect");
-        audio.play(sfx_handles.hooked.clone());
+        commands.spawn(AudioBundle {
+            source: sfx_handles.hooked.clone(),
+            settings: PlaybackSettings::DESPAWN,
+        });
     }
 
-    for _ in player_starved_reader.iter(&player_starved_events) {
+    for _ in player_starved_reader.read() {
         debug!("Playing starved sound effect");
-        audio.play(sfx_handles.starved.clone());
+        commands.spawn(AudioBundle {
+            source: sfx_handles.starved.clone(),
+            settings: PlaybackSettings::DESPAWN,
+        });
     }
 
-    for _ in player_bonked_reader.iter(&player_bonked_events) {
+    for _ in player_bonked_reader.read() {
         debug!("Playing bonked sound effect");
-        audio.play(sfx_handles.bonked.clone());
+        commands.spawn(AudioBundle {
+            source: sfx_handles.bonked.clone(),
+            settings: PlaybackSettings::DESPAWN,
+        });
     }
 
-    for _ in player_ate_reader.iter(&player_ate_events) {
+    for _ in player_ate_reader.read() {
         debug!("Playing ate sound effect");
-        audio.play(sfx_handles.eat.clone());
+        commands.spawn(AudioBundle {
+            source: sfx_handles.eat.clone(),
+            settings: PlaybackSettings::DESPAWN,
+        });
     }
 
-    for _ in player_boosted_reader.iter(&player_boosted_events) {
+    for event in player_boosted_reader.read() {
         debug!("Playing boosted sound effect");
-        audio.play(sfx_handles.boost.clone());
+        commands.spawn(AudioBundle {
+            source: sfx_handles.boost.clone(),
+            settings: PlaybackSettings::DESPAWN,
+        });
     }
 }

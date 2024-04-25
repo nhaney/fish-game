@@ -43,6 +43,7 @@ pub(super) fn restart_game(
 }
 
 // Events
+#[derive(Default, Event)]
 pub struct GameOver {
     pub winning_boat: Option<Entity>,
 }
@@ -55,6 +56,7 @@ pub struct GameRestarted;
 const MAX_DIFFICULTY: u8 = 4;
 const SCORE_PER_WORM: u8 = 5;
 
+#[derive(Default, Resource)]
 pub struct Score {
     pub count: u32,
     pub timer: Timer,
