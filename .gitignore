@@ -6,3 +6,5 @@ scores.json
 __pycache__
 .vim
 *.zip
+
+.direnv/
