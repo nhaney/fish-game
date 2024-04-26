@@ -37,6 +37,7 @@ struct BoatStats {
     boat_type: BoatTypes,
 }
 
+#[derive(Debug, Resource)]
 pub(super) struct BoatMaterials {
     boat: Handle<ColorMaterial>,
     line: Handle<ColorMaterial>,
@@ -44,10 +45,10 @@ pub(super) struct BoatMaterials {
     hook: Handle<ColorMaterial>,
 }
 
-impl FromResources for BoatMaterials {
-    fn from_resources(resources: &Resources) -> Self {
-        let asset_server = resources.get::<AssetServer>().unwrap();
-        let mut materials = resources.get_mut::<Assets<ColorMaterial>>().unwrap();
+impl FromWorld for BoatMaterials {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.get_resource::<AssetServer>().unwrap();
+        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
 
         BoatMaterials {
             boat: materials.add(asset_server.load("sprites/boat/boat.png").into()),
@@ -117,22 +118,27 @@ fn boat_stats_factory(difficulty: u8, rng: &mut ChaCha8Rng) -> BoatStats {
     }
 }
 
+#[derive(Component)]
 pub struct Boat;
 
+#[derive(Component)]
 pub struct Worm {
     #[allow(dead_code)]
     line_entity: Entity,
 }
 
+#[derive(Component)]
 pub struct Hook {
     line_entity: Entity,
 }
 
+#[derive(Component)]
 pub struct Line {
     start_point: Vec3,
     end_point: Vec3,
 }
 
+#[derive(Debug, Resource)]
 pub(super) struct BoatSpawner {
     pub spawn_timer: Timer,
 }
@@ -220,7 +226,7 @@ fn spawn_boat(
             RenderLayer::Objects,
         ))
         .with_bundle(SpriteBundle {
-            material: boat_materials.boat.clone(),
+            texture: boat_materials.boat.clone(),
             sprite: Sprite::new(Vec2::new(stats.width, stats.height)),
             transform: Transform {
                 translation: boat_start_pos,
@@ -286,9 +292,9 @@ fn spawn_lines(
 
         // spawn the rod
         let mut builder = PathBuilder::new();
-        builder.move_to(point(rod_start_point.x, rod_start_point.y));
-        builder.line_to(point(rod_angle_point.x, rod_angle_point.y));
-        builder.line_to(point(line_start_point.x, line_start_point.y));
+        builder.move_to(rod_start_point.into());
+        builder.line_to(rod_angle_point.into());
+        builder.line_to(line_start_point.into());
         let rod = builder.build();
 
         parent.spawn(
@@ -305,8 +311,8 @@ fn spawn_lines(
 
         // spawn the line that connects the start and end points
         builder = PathBuilder::new();
-        builder.move_to(point(line_start_point.x, line_start_point.y));
-        builder.line_to(point(line_end_point.x, line_end_point.y));
+        builder.move_to(line_start_point.into());
+        builder.line_to(line_end_point.into());
         builder.close();
 
         let line = builder.build();
@@ -344,7 +350,7 @@ fn spawn_lines(
             ))
             .with_bundle(SpriteBundle {
                 sprite: Sprite::new(Vec2::new(HOOK_SIZE, HOOK_SIZE)),
-                material: hook_material.clone(),
+                texture: hook_material.clone(),
                 transform: Transform::from_translation(hook_point),
                 ..Default::default()
             });
@@ -368,7 +374,7 @@ fn spawn_lines(
                 ))
                 .with_bundle(SpriteBundle {
                     sprite: Sprite::new(Vec2::new(WORM_SIZE, WORM_SIZE)),
-                    material: worm_initial_animation_frame.material_handle.clone(),
+                    texture: worm_initial_animation_frame.material_handle.clone(),
                     transform: Transform::from_translation(worm_pos),
                     ..Default::default()
                 });
@@ -411,11 +417,11 @@ pub(super) fn despawn_boat_system(
         if (hook_x + collider.width) < -(arena.width / 2.0)
             || (hook_x - collider.width) > (arena.width / 2.0)
         {
-            let off_screen_counter = off_screen_hooks.entry(parent.0).or_insert(0);
+            let off_screen_counter = off_screen_hooks.entry(parent.get()).or_insert(0);
             *off_screen_counter += 1;
         }
 
-        let total_counter = total_hooks.entry(parent.0).or_insert(0);
+        let total_counter = total_hooks.entry(parent.get()).or_insert(0);
         *total_counter += 1
     }
 
@@ -429,8 +435,7 @@ pub(super) fn despawn_boat_system(
 
 pub(super) fn boat_exit_system(
     commands: &mut Commands,
-    mut game_over_reader: Local<EventReader<GameOver>>,
-    game_over_events: Res<Events<GameOver>>,
+    mut game_over_reader: EventReader<GameOver>,
     mut query: Query<(
         &Boat,
         &mut SideScrollDirection,
@@ -439,7 +444,7 @@ pub(super) fn boat_exit_system(
         Entity,
     )>,
 ) {
-    if let Some(game_over_event) = game_over_reader.earliest(&game_over_events) {
+    if let Some(game_over_event) = game_over_reader.read().next() {
         for (_, mut direction, mut velocity, transform, entity) in query.iter_mut() {
             if Some(entity) == game_over_event.winning_boat {
                 // remove the velocity of the boat that got the fish so it stays on screen
@@ -463,11 +468,10 @@ pub(super) fn boat_exit_system(
 
 pub(super) fn despawn_worms_on_game_over(
     commands: &mut Commands,
-    mut game_over_reader: Local<EventReader<GameOver>>,
-    game_over_events: Res<Events<GameOver>>,
+    mut game_over_reader: EventReader<GameOver>,
     query: Query<Entity, With<Worm>>,
 ) {
-    if game_over_reader.earliest(&game_over_events).is_some() {
+    if game_over_reader.read().next().is_some() {
         for worm_entity in query.iter() {
             commands.despawn_recursive(worm_entity);
         }
@@ -476,11 +480,11 @@ pub(super) fn despawn_worms_on_game_over(
 
 pub(super) fn worm_eaten_system(
     commands: &mut Commands,
-    mut player_ate_reader: Local<EventReader<PlayerAte>>,
+    mut player_ate_reader: EventReader<PlayerAte>,
     player_ate_events: Res<Events<PlayerAte>>,
     query: Query<(&Worm, Entity)>,
 ) {
-    for player_ate_event in player_ate_reader.iter(&player_ate_events) {
+    for player_ate_event in player_ate_reader.read() {
         for (_, entity) in query.iter() {
             if entity == player_ate_event.worm_entity {
                 commands.despawn_recursive(entity);
@@ -492,11 +496,10 @@ pub(super) fn worm_eaten_system(
 pub(super) fn reset_boats_on_restart(
     commands: &mut Commands,
     mut boat_spawner: ResMut<BoatSpawner>,
-    restart_events: Res<Events<GameRestarted>>,
-    mut restart_reader: Local<EventReader<GameRestarted>>,
+    mut restart_reader: EventReader<GameRestarted>,
     boat_query: Query<Entity, With<Boat>>,
 ) {
-    if restart_reader.earliest(&restart_events).is_some() {
+    if restart_reader.read().next().is_some() {
         debug!("Despawning all boats and restarting spawner because of restart event.");
         // despawn all boats
         for boat_entity in boat_query.iter() {
@@ -515,13 +518,12 @@ pub(super) fn reset_boats_on_restart(
 #[allow(clippy::type_complexity)]
 pub(super) fn player_hooked_handler(
     commands: &mut Commands,
-    mut player_hooked_reader: Local<EventReader<PlayerHooked>>,
-    player_hooked_events: Res<Events<PlayerHooked>>,
+    mut player_hooked_reader: EventReader<PlayerHooked>,
     hook_query: Query<(&Hook, &Transform), With<Hook>>,
     line_query: Query<&Line>,
     mut player_query: Query<(&mut Transform, &mut Velocity), (With<Player>, Without<Hook>)>,
 ) {
-    for player_hooked_event in player_hooked_reader.iter(&player_hooked_events) {
+    for player_hooked_event in player_hooked_reader.read() {
         let player_entity = player_hooked_event.player_entity;
         let hook_entity = player_hooked_event.hook_entity;
 
@@ -578,8 +580,8 @@ pub(super) fn redraw_line_when_hook_moves(
         line.end_point.y += HOOK_SIZE / 2.0;
 
         let mut builder = PathBuilder::new();
-        builder.move_to(point(line.start_point.x, line.start_point.y));
-        builder.line_to(point(line.end_point.x, line.end_point.y));
+        builder.move_to(line.start_point.into());
+        builder.line_to(line.end_point.into());
         builder.close();
 
         let line = builder.build();
@@ -601,12 +603,11 @@ pub(super) fn redraw_line_when_hook_moves(
 
 pub(super) fn player_bonked_handler(
     commands: &mut Commands,
-    mut player_bonked_reader: Local<EventReader<PlayerBonked>>,
-    player_bonked_events: Res<Events<PlayerBonked>>,
+    mut player_bonked_reader: EventReader<PlayerBonked>,
     boat_query: Query<(&Collider, &Transform), With<Boat>>,
     mut player_query: Query<(&Transform, &mut Velocity), With<Player>>,
 ) {
-    for player_bonked_event in player_bonked_reader.iter(&player_bonked_events) {
+    for player_bonked_event in player_bonked_reader.read() {
         let player_entity = player_bonked_event.player_entity;
         let boat_entity = player_bonked_event.boat_entity;
 

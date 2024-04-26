@@ -15,12 +15,12 @@ pub(crate) struct PlayerStats {
     pub stop_threshold: f32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Component)]
 pub(crate) struct Player {
     pub stats: PlayerStats,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Component)]
 pub(super) struct BoostSupply {
     pub max_boosts: u8,
     pub count: u8,
@@ -58,10 +58,12 @@ impl BoostSupply {
 }
 
 // TODO: Could this component be shared? It might be cool for other things to sink in the future
+#[derive(Default, Component)]
 pub(super) struct Sink {
     pub weight: f32,
 }
 
+#[derive(Default, Component)]
 pub(crate) struct HungerCountdown {
     pub time_left: f32,
     pub extra_time_per_worm: f32,
@@ -69,10 +71,9 @@ pub(crate) struct HungerCountdown {
 
 pub(super) fn hunger_countdown_system(
     game_state: Res<GameState>,
-    mut player_ate_reader: Local<EventReader<PlayerAte>>,
-    player_ate_events: Res<Events<PlayerAte>>,
+    mut player_ate_reader: EventReader<PlayerAte>,
     time: Res<Time>,
-    mut starved_events: ResMut<Events<PlayerStarved>>,
+    mut starved_event_writer: EventWriter<PlayerStarved>,
     mut query: Query<(&mut HungerCountdown, Entity)>,
 ) {
     if !game_state.is_running() {
@@ -81,7 +82,7 @@ pub(super) fn hunger_countdown_system(
 
     let mut players_to_add_time_for: HashSet<Entity> = HashSet::new();
 
-    for ate_event in player_ate_reader.iter(&player_ate_events) {
+    for ate_event in player_ate_reader.read() {
         players_to_add_time_for.insert(ate_event.player_entity);
     }
 
@@ -99,17 +100,16 @@ pub(super) fn hunger_countdown_system(
         if hunger_countdown.time_left < 0.0 {
             // emit starved event for entity
             debug!("Player starved!");
-            starved_events.send(PlayerStarved { player_entity })
+            starved_event_writer.send(PlayerStarved { player_entity })
         }
     }
 }
 
 pub(super) fn add_boost_system(
-    mut player_ate_reader: Local<EventReader<PlayerAte>>,
-    player_ate_events: Res<Events<PlayerAte>>,
+    mut player_ate_reader: EventReader<PlayerAte>,
     mut query: Query<&mut BoostSupply>,
 ) {
-    for ate_event in player_ate_reader.iter(&player_ate_events) {
+    for ate_event in player_ate_reader.read() {
         if let Ok(mut boost_supply) = query.get_mut(ate_event.player_entity) {
             debug!("Adding extra time because player ate a worm.");
             boost_supply.add_boost();

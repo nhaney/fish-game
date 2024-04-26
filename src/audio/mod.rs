@@ -8,7 +8,9 @@ pub struct AudioPlugin;
 
 impl Plugin for AudioPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<sfx::SfxHandles>()
-            .add_system_to_stage(stages::PREPARE_RENDER, sfx::play_sfx_system.system());
+        app.init_resource::<sfx::SfxHandles>().add_systems(
+            Update,
+            (sfx::play_sfx_system).in_set(stages::PrepareRenderSet),
+        )
     }
 }

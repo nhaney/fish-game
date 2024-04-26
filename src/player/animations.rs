@@ -9,11 +9,10 @@ use crate::shared::{
 pub(super) fn player_starved_handler(
     commands: &mut Commands,
     arena: Res<Arena>,
-    mut player_starved_reader: Local<EventReader<PlayerStarved>>,
-    player_starved_events: Res<Events<PlayerStarved>>,
+    mut player_starved_reader: EventReader<PlayerStarved>,
     mut player_query: Query<(&mut Transform, &mut Velocity, &SideScrollDirection), With<Player>>,
 ) {
-    for player_starved_event in player_starved_reader.iter(&player_starved_events) {
+    for player_starved_event in player_starved_reader.read() {
         let (mut player_transform, mut player_velocity, player_facing) = player_query
             .get_mut(player_starved_event.player_entity)
             .unwrap();

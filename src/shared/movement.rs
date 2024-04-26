@@ -2,15 +2,19 @@ use bevy::prelude::*;
 
 use super::game::{GameState, GameStates};
 
+#[derive(Component)]
 pub struct Velocity(pub Vec3);
 
+#[derive(Component)]
 pub struct SideScrollDirection(pub bool);
 
+#[derive(Component)]
 pub struct Destination {
     pub point: Vec3,
     pub trigger_distance: f32,
 }
 
+#[derive(Component)]
 pub struct DestinationReached {
     #[allow(dead_code)]
     entity: Entity,

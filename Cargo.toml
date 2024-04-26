@@ -25,6 +25,7 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.13.2"
+bevy_prototype_lyon = "0.11"
 
 #bevy = { git = "https://github.com/bevyengine/bevy", rev = "841755aaf23acfd55b375c37390daeb302c5b30b", default-features = false }
 #bevy_webgl2 = {git = "https://github.com/mrk-its/bevy_webgl2", rev="bfc10323a37cfd98aba95f6b44e902f8ef5daae7", optional=true}

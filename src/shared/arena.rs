@@ -7,6 +7,7 @@ pub const DEFAULT_ARENA_HEIGHT: f32 = 360.0;
 pub const DEFAULT_ARENA_OFFSET: f32 = -50.0;
 
 // TODO: Make this API cleaner
+#[derive(Debug, Resource)]
 pub struct Arena {
     pub width: f32,
     pub height: f32,

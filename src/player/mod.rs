@@ -20,7 +20,7 @@ mod states;
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         debug!("Building player plugin...");
         // Resources for player sprites and animations
         app.init_resource::<render::PlayerStateAnimations>()

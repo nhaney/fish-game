@@ -31,8 +31,28 @@ Handles any final events from the frame and how final frame looks (animation, au
 */
 use bevy::prelude::*;
 
+/* TODO: remove when this is working.
 pub const HANDLE_EVENTS: &str = "handle_events";
 pub const MOVEMENT: &str = "movement";
 pub const FINALIZE_MOVEMENT: &str = stage::UPDATE;
 pub const PREPARE_RENDER: &str = "prepare_render";
 pub const CALCULATE_COLLISIONS: &str = "calculate_collisions";
+*/
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EmitEventsSet;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct HandleEventsSet;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MovementSet;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FinalizeMovementSet;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CalculateCollisionsSet;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PrepareRenderSet;

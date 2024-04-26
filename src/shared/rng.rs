@@ -5,6 +5,7 @@ use rand_chacha::ChaCha8Rng;
 
 use super::game::GameRestarted;
 
+#[derive(Resource)]
 pub struct GameRng {
     pub rng: ChaCha8Rng,
     pub seed: <ChaCha8Rng as SeedableRng>::Seed,

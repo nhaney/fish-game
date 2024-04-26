@@ -10,6 +10,7 @@ pub enum GameStates {
     GameOver,
 }
 
+#[derive(Debug, Copy, Clone, Resource)]
 pub struct GameState {
     pub cur_state: GameStates,
     pub prev_state: GameStates,
@@ -48,9 +49,13 @@ pub struct GameOver {
     pub winning_boat: Option<Entity>,
 }
 
+#[derive(Event)]
 pub struct GamePaused;
+
+#[derive(Event)]
 pub struct GameUnpaused;
 
+#[derive(Event)]
 pub struct GameRestarted;
 
 const MAX_DIFFICULTY: u8 = 4;
@@ -62,6 +67,7 @@ pub struct Score {
     pub timer: Timer,
 }
 
+#[derive(Default, Resource)]
 pub struct Difficulty {
     pub multiplier: u8,
     pub(super) timer: Timer,
