@@ -31,20 +31,31 @@ impl Plugin for PlayerPlugin {
             .add_event::<events::PlayerAte>()
             .add_event::<events::PlayerBoosted>()
             // Startup systems initialize the player and its components
-            .add_startup_system(init_player.system())
+            .add_systems(Startup, init_player)
             // Timer systems
-            .add_system_to_stage(stage::EVENT, states::boost_cooldown_system.system())
-            .add_system_to_stage(stage::EVENT, attributes::hunger_countdown_system.system())
-            // systems that handle input/velocity calculation
-            // systems that handle collision events
-            .add_system_to_stage(stages::HANDLE_EVENTS, attributes::add_boost_system.system())
-            .add_system_to_stage(
-                stages::HANDLE_EVENTS,
-                animations::player_starved_handler.system(),
+            .add_systems(
+                Update,
+                (
+                    states::boost_cooldown_system,
+                    attributes::hunger_countdown_system,
+                )
+                    .in_set(stages::EmitEventsSet),
             )
-            .add_system_to_stage(stages::HANDLE_EVENTS, states::swim_movement_system.system())
-            .add_system_to_stage(stages::MOVEMENT, states::boost_movement_system.system())
-            .add_system_to_stage(stages::MOVEMENT, movement::sink_system.system())
+            // systems that handle collision events and input events
+            .add_systems(
+                Update,
+                (
+                    attributes::add_boost_system,
+                    animations::player_starved_handler,
+                    states::swim_movement_system,
+                )
+                    .in_set(stages::HandleEventsSet),
+            )
+            // systems that handle input/velocity calculation
+            .add_systems(
+                Update,
+                (states::boost_movement_system, movement::sink_system).in_set(stages::MovementSet),
+            )
             // This system needs to happen before render, but after final position has
             // been calculated to prevent stuttering movement
             .add_stage_before(
