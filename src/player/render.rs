@@ -11,13 +11,14 @@ use crate::shared::{
     render::RenderLayer,
 };
 
+#[derive(Resource)]
 pub(super) struct PlayerStateAnimations {
     pub map: HashMap<PlayerStates, Animation>,
 }
 
-impl FromResources for PlayerStateAnimations {
-    fn from_resources(resources: &Resources) -> Self {
-        let asset_server = resources.get::<AssetServer>().unwrap();
+impl FromWorld for PlayerStateAnimations {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.get_resource()resources.get::<AssetServer>().unwrap();
         let mut materials = resources.get_mut::<Assets<ColorMaterial>>().unwrap();
 
         let swim_1_handle = materials.add(asset_server.load("sprites/player/fish1.png").into());

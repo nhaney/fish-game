@@ -4,7 +4,7 @@ use crate::shared::{
     game::GameRestarted,
     movement::{SideScrollDirection, Velocity},
     render::RenderLayer,
-    stages,
+    stages::{self, AdjustPositionsSet},
 };
 use bevy::prelude::*;
 use std::collections::HashSet;
@@ -48,6 +48,8 @@ impl Plugin for PlayerPlugin {
                     attributes::add_boost_system,
                     animations::player_starved_handler,
                     states::swim_movement_system,
+                    reset_player,
+                    render::despawn_trackers_on_gameover_or_restart,
                 )
                     .in_set(stages::HandleEventsSet),
             )
@@ -58,39 +60,29 @@ impl Plugin for PlayerPlugin {
             )
             // This system needs to happen before render, but after final position has
             // been calculated to prevent stuttering movement
-            .add_stage_before(
-                stages::PREPARE_RENDER,
-                "adjust_position",
-                SystemStage::parallel(),
+            .configure_sets(
+                Update,
+                stages::AdjustPositionsSet.before(stages::PrepareRenderSet),
             )
-            .add_system_to_stage("adjust_position", collision::player_bounds_system.system())
             // systems that calculate collision
-            .add_system_to_stage(
-                stages::CALCULATE_COLLISIONS,
-                collision::player_hook_collision_system.system(),
-            )
-            .add_system_to_stage(
-                stages::CALCULATE_COLLISIONS,
-                collision::player_worm_collision_system.system(),
-            )
-            .add_system_to_stage(
-                stages::CALCULATE_COLLISIONS,
-                collision::player_boat_collision_system.system(),
+            .add_systems(
+                Update,
+                (
+                    collision::player_bounds_system,
+                    collision::player_hook_collision_system,
+                    collision::player_worm_collision_system,
+                )
+                    .in_set(stages::AdjustPositionsSet),
             )
             // systems that handle final events and presentation
-            .add_system_to_stage(stages::HANDLE_EVENTS, reset_player.system())
-            .add_system_to_stage(
-                stages::HANDLE_EVENTS,
-                render::despawn_trackers_on_gameover_or_restart.system(),
+            .add_systems(
+                Update,
+                (
+                    render::player_state_animation_change_system,
+                    render::update_tracker_display_from_boost_supply,
+                )
+                    .in_set(stages::PrepareRenderSet),
             )
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                render::player_state_animation_change_system.system(),
-            )
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                render::update_tracker_display_from_boost_supply.system(),
-            );
     }
 }
 

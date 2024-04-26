@@ -55,4 +55,7 @@ pub struct FinalizeMovementSet;
 pub struct CalculateCollisionsSet;
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AdjustPositionsSet;
+
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PrepareRenderSet;
