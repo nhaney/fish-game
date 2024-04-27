@@ -31,8 +31,12 @@ bevy_prototype_lyon = "0.11"
 #bevy_webgl2 = {git = "https://github.com/mrk-its/bevy_webgl2", rev="bfc10323a37cfd98aba95f6b44e902f8ef5daae7", optional=true}
 #bevy_prototype_lyon = { git = "https://github.com/nhaney/bevy_prototype_lyon", branch = "master"}
 
-rand = { version = "0.7", default-features = false }
-rand_chacha = "0.2.2"
+rand = "0.8.5"
+rand_chacha = "0.3.1"
+
+#rand = { version = "0.7", default-features = false }
+#rand_chacha = "0.2.2"
+
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 #wasm-bindgen = "0.2.69"

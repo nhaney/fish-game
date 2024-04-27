@@ -15,17 +15,14 @@ pub(super) fn add_game_over_text(
     let root_game_over_node = commands
         .spawn(NodeBundle {
             style: Style {
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 position_type: PositionType::Absolute,
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            material: materials.add(Color::NONE.into()),
-            visible: Visible {
-                is_transparent: true,
-                ..Default::default()
-            },
+            visibility: Visibility::Hidden,
             ..Default::default()
         })
         .with_children(|parent| {
@@ -34,22 +31,15 @@ pub(super) fn add_game_over_text(
                     style: Style {
                         ..Default::default()
                     },
-                    text: Text {
-                        value: "HOOKED!".to_string(),
-                        font: fonts.main_font.clone(),
-                        style: TextStyle {
+                    text: Text::from_section(
+                        "HOOKED!".to_string(),
+                        TextStyle {
                             font_size: 100.0,
+                            font: fonts.main_font.clone(),
                             color: Color::RED,
-                            alignment: TextAlignment {
-                                vertical: VerticalAlign::Center,
-                                horizontal: HorizontalAlign::Center,
-                            },
                         },
-                    },
-                    visible: Visible {
-                        is_visible: false,
-                        ..Default::default()
-                    },
+                    ),
+                    visibility: Visibility::Inherited,
                     ..Default::default()
                 })
                 .with(GameOverText)
@@ -57,30 +47,19 @@ pub(super) fn add_game_over_text(
                     parent
                         .spawn(TextBundle {
                             style: Style {
-                                position: Rect {
-                                    bottom: Val::Px(-100.0),
-                                    ..Default::default()
-                                },
+                                position_type: PositionType::Relative,
+                                bottom: Val::Px(-100.0),
                                 ..Default::default()
                             },
-                            text: Text {
-                                value: "Press [R] to restart".to_string(),
-                                font: fonts.main_font.clone(),
-                                style: TextStyle {
+                            text: Text::from_section(
+                                "Press [R] to restart".to_string(),
+                                TextStyle {
                                     font_size: 50.0,
+                                    font: fonts.main_font.clone(),
                                     color: Color::RED,
-                                    alignment: TextAlignment {
-                                        vertical: VerticalAlign::Center,
-                                        horizontal: HorizontalAlign::Center,
-                                    },
                                 },
-                            },
-                            visible: Visible {
-                                is_visible: false,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        })
+                            ),
+                            visibility: Visibility::Inherited});
                         .with(RestartText);
                 });
         })

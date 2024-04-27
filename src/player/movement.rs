@@ -12,7 +12,7 @@ the target speed of the player.
 */
 // TODO: Change to use specific player command events
 pub(super) fn move_player_from_input(
-    keyboard_input: &Input<KeyCode>,
+    keyboard_input: &ButtonInput<KeyCode>,
     player: &Player,
     mut velocity: &mut Velocity,
     mut facing: &mut SideScrollDirection,

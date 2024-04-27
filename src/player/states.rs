@@ -16,7 +16,7 @@ pub(super) enum PlayerStates {
     Boost,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Component)]
 pub(super) struct PlayerState {
     pub(super) current_state: PlayerStates,
     pub(super) blocked_transitions: HashSet<PlayerStates>,
@@ -138,7 +138,7 @@ impl PlayerState {
 }
 
 /// Data that is assigned to an entity to represent their boost after entering a boosting state
-#[derive(Debug)]
+#[derive(Debug, Component)]
 pub(super) struct BoostData {
     velocity: Vec3,
     timer: Timer,
@@ -149,7 +149,7 @@ pub(super) struct BoostData {
 Cooldown component that is applied after boosting that must expire before
 boosting is allowed again
 */
-#[derive(Debug)]
+#[derive(Debug, Component)]
 pub(super) struct BoostCooldown {
     timer: Timer,
     did_release: bool,
@@ -157,10 +157,10 @@ pub(super) struct BoostCooldown {
 
 /// Moves the player when they are not in the Boost state
 pub(super) fn swim_movement_system(
-    mut commands: &mut Commands,
+    mut commands: Commands,
     mut boost_events: ResMut<Events<PlayerBoosted>>,
     game_state: Res<GameState>,
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<(
         &Player,
         &mut Velocity,
@@ -241,7 +241,7 @@ to boost again.
 pub(super) fn boost_cooldown_system(
     commands: &mut Commands,
     time: Res<Time>,
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     game_state: Res<GameState>,
     mut query: Query<(&mut BoostCooldown, &mut PlayerState, Entity)>,
 ) {

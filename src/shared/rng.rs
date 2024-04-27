@@ -14,7 +14,7 @@ pub struct GameRng {
 impl Default for GameRng {
     fn default() -> Self {
         let mut seed: <ChaCha8Rng as SeedableRng>::Seed = Default::default();
-        thread_rng().fill(&mut seed);
+        rand::thread_rng().fill(&mut seed);
 
         debug!("Random seed used: {:?}", seed);
 
@@ -27,10 +27,9 @@ impl Default for GameRng {
 
 pub(super) fn reset_rng_on_restart(
     mut rng: ResMut<GameRng>,
-    restart_events: Res<Events<GameRestarted>>,
-    mut restart_reader: Local<EventReader<GameRestarted>>,
+    mut restart_reader: EventReader<GameRestarted>,
 ) {
-    if restart_reader.earliest(&restart_events).is_some() {
+    if restart_reader.read().next().is_some() {
         let mut seed: <ChaCha8Rng as SeedableRng>::Seed = Default::default();
         thread_rng().fill(&mut seed);
 

@@ -14,7 +14,7 @@ pub struct Destination {
     pub trigger_distance: f32,
 }
 
-#[derive(Component)]
+#[derive(Event)]
 pub struct DestinationReached {
     #[allow(dead_code)]
     entity: Entity,
@@ -30,6 +30,7 @@ impl SideScrollDirection {
     }
 }
 
+#[derive(Debug, Component)]
 pub struct Follow {
     pub entity_to_follow: Entity,
     pub offset: Vec3,

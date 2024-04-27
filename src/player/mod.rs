@@ -113,12 +113,11 @@ fn reset_player(
     mut commands: &mut Commands,
     materials: ResMut<Assets<ColorMaterial>>,
     meshes: ResMut<Assets<Mesh>>,
-    restart_events: Res<Events<GameRestarted>>,
     player_state_animations: Res<render::PlayerStateAnimations>,
-    mut restart_reader: Local<EventReader<GameRestarted>>,
+    mut restart_reader: EventReader<GameRestarted>,
     player_query: Query<Entity, With<attributes::Player>>,
 ) {
-    if restart_reader.earliest(&restart_events).is_some() {
+    if restart_reader.read().next().is_some() {
         debug!("Despawning current player entity and creating a new one.");
         let player_entity = player_query.iter().next().unwrap();
         // despawn current player
@@ -183,9 +182,9 @@ fn spawn_player_entity(
             RenderLayer::Player,
         ))
         .with_bundle(SpriteBundle {
-            material: first_animation_frame.material_handle.clone(),
+            texture: first_animation_frame.material_handle.clone(),
             sprite: Sprite {
-                size: Vec2::new(PLAYER_WIDTH, PLAYER_HEIGHT),
+                custom_size: Some(Vec2::new(PLAYER_WIDTH, PLAYER_HEIGHT)),
                 ..Default::default()
             },
             ..Default::default()

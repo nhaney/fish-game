@@ -18,8 +18,8 @@ pub(super) struct PlayerStateAnimations {
 
 impl FromWorld for PlayerStateAnimations {
     fn from_world(world: &mut World) -> Self {
-        let asset_server = world.get_resource()resources.get::<AssetServer>().unwrap();
-        let mut materials = resources.get_mut::<Assets<ColorMaterial>>().unwrap();
+        let asset_server = world.get_resource::<AssetServer>().unwrap();
+        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
 
         let swim_1_handle = materials.add(asset_server.load("sprites/player/fish1.png").into());
         let swim_2_handle = materials.add(asset_server.load("sprites/player/fish2.png").into());
@@ -116,10 +116,11 @@ pub(super) fn player_state_animation_change_system(
       of the three (or more) sprite entities (can these all be on the same entity? no.)
       that represent the number of boosts available.
 */
+#[derive(Component)]
 pub(super) struct BoostTracker;
 
 pub(super) fn spawn_player_boost_trackers(
-    commands: &mut Commands,
+    mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
     player_width: f32,
@@ -155,50 +156,56 @@ pub(super) fn spawn_player_boost_trackers(
 
     for tracker_position in tracker_positions {
         // make the border and the tracker child components of the player
+        let tracker_shape = shapes::Circle {
+            radius: 4.0,
+            center: Vec2::ZERO,
+        };
+
+        let tracker_border_shape = shapes::Circle {
+            radius: 5.0,
+            center: Vec2::ZERO,
+        };
+
         let tracker = commands
-            .spawn(primitive(
-                pink_color.clone(),
-                &mut meshes,
-                ShapeType::Circle(4.0),
-                TessellationMode::Fill(&FillOptions::default()),
-                Vec3::zero(),
+            .spawn((
+                ShapeBundle {
+                    path: GeometryBuilder::build_as(&tracker_shape),
+                    ..default()
+                },
+                Fill::color(pink_color.clone()),
+                BoostTracker,
+                RenderLayer::Player,
+                Follow {
+                    entity_to_follow: player_entity,
+                    offset: tracker_position,
+                    follow_global_transform: false,
+                },
             ))
-            .with(BoostTracker)
-            .with(RenderLayer::Player)
-            .with(Follow {
-                entity_to_follow: player_entity,
-                offset: tracker_position,
-                follow_global_transform: false,
-            })
-            .current_entity()
-            .unwrap();
+            .id();
 
         let tracker_border = commands
-            .spawn(primitive(
-                hot_pink_color.clone(),
-                &mut meshes,
-                ShapeType::Circle(5.0),
-                TessellationMode::Stroke(&StrokeOptions::default()),
-                Vec3::zero(),
+            .spawn((
+                ShapeBundle {
+                    path: GeometryBuilder::build_as(&tracker_border_shape),
+                    ..default()
+                },
+                Stroke::new(hot_pink_color.clone(), 2.0),
+                RenderLayer::Player,
             ))
-            .with(RenderLayer::Player)
-            .current_entity()
-            .unwrap();
+            .id();
 
-        commands.push_children(tracker, &[tracker_border]);
+        commands.entity(tracker).push_children(&[tracker_border]);
         boost_trackers.push(tracker);
     }
 
     debug!("Added boost tracker entities: {:?}", boost_trackers);
 
-    commands.insert_one(
-        player_entity,
-        BoostTrackerDisplay {
-            trackers: boost_trackers,
-        },
-    );
+    commands.entity(player_entity).insert(BoostTrackerDisplay {
+        trackers: boost_trackers,
+    });
 }
 
+#[derive(Debug, Component)]
 pub(super) struct BoostTrackerDisplay {
     trackers: Vec<Entity>,
 }
@@ -207,7 +214,7 @@ pub(super) struct BoostTrackerDisplay {
 // frame
 pub(super) fn update_tracker_display_from_boost_supply(
     player_query: Query<(&BoostSupply, &BoostTrackerDisplay)>,
-    mut tracker_query: Query<&mut Visible, With<BoostTracker>>,
+    mut tracker_query: Query<&mut Visibility, With<BoostTracker>>,
 ) {
     for (boost_supply, boost_tracker_display) in player_query.iter() {
         for i in 0..boost_supply.max_boosts {
@@ -215,43 +222,42 @@ pub(super) fn update_tracker_display_from_boost_supply(
             let mut tracker_visibility = tracker_query.get_mut(tracker_entity).unwrap();
 
             if (i + 1) <= boost_supply.count {
-                tracker_visibility.is_visible = true;
+                tracker_visibility = Visibility::Hidden;
             } else {
-                tracker_visibility.is_visible = false;
+                tracker_visibility = Visibility::Visible;
             }
         }
     }
 }
 
 pub(super) fn despawn_trackers_on_gameover_or_restart(
-    commands: &mut Commands,
-    game_over_events: Res<Events<GameOver>>,
-    mut game_over_reader: Local<EventReader<GameOver>>,
-    game_restarted_events: Res<Events<GameRestarted>>,
-    mut game_restarted_reader: Local<EventReader<GameRestarted>>,
+    mut commands: Commands,
+    mut game_over_reader: EventReader<GameOver>,
+    mut game_restarted_reader: EventReader<GameRestarted>,
     boost_tracker_query: Query<Entity, With<BoostTracker>>,
     player_query: Query<Entity, With<BoostTrackerDisplay>>,
 ) {
-    if game_over_reader.earliest(&game_over_events).is_some() {
+    if game_over_reader.read().next() {
         for boost_tracker in boost_tracker_query.iter() {
-            commands.despawn_recursive(boost_tracker);
+            commands.entity(boost_tracker).despawn_recursive();
         }
 
         for player_entity in player_query.iter() {
-            commands.remove_one::<BoostTrackerDisplay>(player_entity);
+            commands
+                .entity(player_entity)
+                .remove::<BoostTrackerDisplay>();
         }
     }
 
-    if game_restarted_reader
-        .earliest(&game_restarted_events)
-        .is_some()
-    {
+    if game_restarted_reader.read().next().is_some() {
         for boost_tracker in boost_tracker_query.iter() {
-            commands.despawn_recursive(boost_tracker);
+            commands.entity(boost_tracker).despawn_recursive();
         }
 
         for player_entity in player_query.iter() {
-            commands.remove_one::<BoostTrackerDisplay>(player_entity);
+            commands
+                .entity(player_entity)
+                .remove::<BoostTrackerDisplay>();
         }
     }
 }

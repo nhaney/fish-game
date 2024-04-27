@@ -1,27 +1,29 @@
-use bevy::{prelude::*, render::camera::Camera, ui::camera::CAMERA_UI};
+use bevy::{prelude::*, window::WindowResized};
 
 use super::arena::Arena;
+use super::MainCamera;
 
 pub(super) fn scale_camera_to_screen_size(
     arena: Res<Arena>,
-    windows: Res<Windows>,
-    mut query: Query<(&Camera, &mut Transform)>,
+    mut resize_event_reader: EventReader<WindowResized>,
+    mut query: Query<(&Camera, &MainCamera, &mut Transform)>,
 ) {
-    let primary_window = windows.get_primary().unwrap();
+    if let Some(resize_event) = resize_event_reader.read().next() {
+        let scale = Vec3::new(
+            arena.width / resize_event.width,
+            arena.height / resize_event.height,
+            1.0,
+        );
 
-    let scale = Vec3::new(
-        arena.width / primary_window.width() as f32,
-        arena.height / primary_window.height() as f32,
-        1.0,
-    );
+        let (_, _, mut camera_transform) = query
+            .get_single_mut()
+            .expect("Could not find camera to resize.");
 
-    for (camera, mut camera_transform) in query.iter_mut() {
-        if camera.name != Some(CAMERA_UI.to_string()) {
-            camera_transform.scale = scale;
-        }
+        camera_transform.scale = scale;
     }
 }
 
+#[derive(Debug, Component)]
 pub enum RenderLayer {
     Player,
     Objects,

@@ -19,7 +19,7 @@ pub struct Animation {
 }
 
 /// Component that represents the current state of animation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Component)]
 pub struct AnimationState {
     pub animation: Animation,
     pub timer: Timer,
