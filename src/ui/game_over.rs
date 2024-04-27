@@ -4,7 +4,10 @@ use super::FontHandles;
 use crate::player::events::{PlayerBonked, PlayerHooked, PlayerStarved};
 use crate::shared::game::GameRestarted;
 
+#[derive(Component)]
 pub(super) struct GameOverText;
+
+#[derive(Component)]
 pub(super) struct RestartText;
 
 pub(super) fn add_game_over_text(
@@ -27,25 +30,27 @@ pub(super) fn add_game_over_text(
         })
         .with_children(|parent| {
             parent
-                .spawn(TextBundle {
-                    style: Style {
+                .spawn((
+                    TextBundle {
+                        style: Style {
+                            ..Default::default()
+                        },
+                        text: Text::from_section(
+                            "HOOKED!".to_string(),
+                            TextStyle {
+                                font_size: 100.0,
+                                font: fonts.main_font.clone(),
+                                color: Color::RED,
+                            },
+                        ),
+                        visibility: Visibility::Inherited,
                         ..Default::default()
                     },
-                    text: Text::from_section(
-                        "HOOKED!".to_string(),
-                        TextStyle {
-                            font_size: 100.0,
-                            font: fonts.main_font.clone(),
-                            color: Color::RED,
-                        },
-                    ),
-                    visibility: Visibility::Inherited,
-                    ..Default::default()
-                })
-                .with(GameOverText)
+                    GameOverText,
+                ))
                 .with_children(|parent| {
-                    parent
-                        .spawn(TextBundle {
+                    parent.spawn((
+                        TextBundle {
                             style: Style {
                                 position_type: PositionType::Relative,
                                 bottom: Val::Px(-100.0),
@@ -59,12 +64,14 @@ pub(super) fn add_game_over_text(
                                     color: Color::RED,
                                 },
                             ),
-                            visibility: Visibility::Inherited});
-                        .with(RestartText);
+                            visibility: Visibility::Inherited..Default::default(),
+                            ..Default::default()
+                        },
+                        RestartText,
+                    ));
                 });
         })
-        .current_entity()
-        .unwrap();
+        .id();
 
     root_game_over_node
 }
@@ -73,52 +80,44 @@ pub(super) fn add_game_over_text(
 #[allow(clippy::type_complexity)]
 #[allow(clippy::too_many_arguments)]
 pub(super) fn show_game_over_text(
-    mut player_hooked_reader: Local<EventReader<PlayerHooked>>,
-    player_hooked_events: Res<Events<PlayerHooked>>,
-    mut player_starved_reader: Local<EventReader<PlayerStarved>>,
-    player_starved_events: Res<Events<PlayerStarved>>,
-    mut player_bonked_reader: Local<EventReader<PlayerBonked>>,
-    player_bonked_events: Res<Events<PlayerBonked>>,
+    mut player_hooked_reader: EventReader<PlayerHooked>,
+    mut player_starved_reader: EventReader<PlayerStarved>,
+    mut player_bonked_reader: EventReader<PlayerBonked>,
     mut game_over_text_query: Query<
-        (&mut Visible, &mut Text),
+        (&mut Visibility, &mut Text),
         (With<GameOverText>, With<Children>),
     >,
+    /*
     mut restart_text_query: Query<
-        &mut Visible,
+        &mut Visibility,
         (Without<GameOverText>, With<Parent>, With<RestartText>),
-    >,
+    >,*/
 ) {
     let mut game_over_message = "".to_string();
-    if player_hooked_reader
-        .earliest(&player_hooked_events)
-        .is_some()
-    {
+    if player_hooked_reader.read().next().is_some() {
         game_over_message = "HOOKED!".to_string();
     }
 
-    if player_bonked_reader
-        .earliest(&player_bonked_events)
-        .is_some()
-    {
+    if player_bonked_reader.read().next().is_some() {
         game_over_message = "BONKED!".to_string();
     }
 
-    if player_starved_reader
-        .earliest(&player_starved_events)
-        .is_some()
-    {
+    if player_starved_reader.read().next().is_some() {
         game_over_message = "STARVED!".to_string();
     }
 
     if game_over_message != *"" {
         for (mut game_over_draw, mut game_over_text) in game_over_text_query.iter_mut() {
-            game_over_text.value = game_over_message.clone();
-            game_over_draw.is_visible = true;
+            game_over_text.sections[0].value = game_over_message.clone();
+            game_over_draw = Visibility::Visible;
         }
 
+        /* TODO: Remove this if the restart text is drawn. I think it should because it inherits
+         * visibility
         for mut restart_text_draw in restart_text_query.iter_mut() {
             restart_text_draw.is_visible = true;
         }
+        */
     }
 }
 
@@ -126,22 +125,23 @@ pub(super) fn show_game_over_text(
 #[allow(clippy::type_complexity)]
 #[allow(clippy::too_many_arguments)]
 pub(super) fn clear_game_over_message_on_restart(
-    restart_events: Res<Events<GameRestarted>>,
-    mut restart_reader: Local<EventReader<GameRestarted>>,
-    mut game_over_text_query: Query<&mut Visible, (With<GameOverText>, With<Children>)>,
+    mut restart_reader: EventReader<GameRestarted>,
+    mut game_over_text_query: Query<&mut Visibility, (With<GameOverText>, With<Children>)>,
+    /*
     mut restart_text_query: Query<
         &mut Visible,
         (Without<GameOverText>, With<Parent>, With<RestartText>),
-    >,
+    >,*/
 ) {
-    if restart_reader.earliest(&restart_events).is_some() {
+    if restart_reader.read().next().is_some() {
         debug!("Clearing game over text after game was restarted.");
         for mut game_over_draw in game_over_text_query.iter_mut() {
-            game_over_draw.is_visible = false;
+            game_over_draw = Visibility::Hidden;
         }
 
+        /*
         for mut restart_text_draw in restart_text_query.iter_mut() {
             restart_text_draw.is_visible = false;
-        }
+        }*/
     }
 }

@@ -11,6 +11,6 @@ impl Plugin for AudioPlugin {
         app.init_resource::<sfx::SfxHandles>().add_systems(
             Update,
             (sfx::play_sfx_system).in_set(stages::PrepareRenderSet),
-        )
+        );
     }
 }

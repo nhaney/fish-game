@@ -31,13 +31,13 @@ fn main() {
             }),
             LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin,
+            shared::SharedPlugin,
+            leaderboard::LeaderboardPlugin,
+            player::PlayerPlugin,
+            objects::ObjectPlugins,
+            ui::UIPlugin,
+            audio::AudioPlugin,
         ))
-        .add_plugin(shared::SharedPlugin)
-        .add_plugin(leaderboard::LeaderboardPlugin)
-        .add_plugin(player::PlayerPlugin)
-        .add_plugin(objects::ObjectPlugins)
-        .add_plugin(ui::UIPlugin)
-        .add_plugin(audio::AudioPlugin)
         .run();
     /*
     .add_resource(WindowDescriptor {

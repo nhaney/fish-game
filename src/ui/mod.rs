@@ -11,62 +11,38 @@ mod score;
 pub struct UIPlugin;
 
 impl Plugin for UIPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         debug!("Building UI plugin...");
         // pause button sprite materials
         app.init_resource::<pause::PauseButtonMaterials>()
             .init_resource::<FontHandles>()
             // Startup systems - create ui elements
-            .add_startup_system(player::add_countdown_text.system())
-            .add_startup_system(setup_ui.system())
+            .add_systems(Startup, (player::add_countdown_text, setup_ui))
             // Systems that react to input
-            .add_system_to_stage(stages::HANDLE_EVENTS, pause::pause_button_system.system())
+            .add_systems(
+                Update,
+                (pause::pause_button_system,).in_set(stages::HandleEventsSet),
+            )
             // Systems that update ui based on current state of the game before rendering
             // Note: These must be in update because UI updates happen before POST_UPDATE
-            .add_system_to_stage(stages::PREPARE_RENDER, score::update_score_text.system())
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                score::change_color_on_game_over.system(),
-            )
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                score::revert_color_on_restart.system(),
-            )
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                game_over::show_game_over_text.system(),
-            )
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                player::update_coundown_text_system.system(),
-            )
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                player::show_countdown_on_restart.system(),
-            )
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                player::hide_countdown_on_game_over.system(),
-            )
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                player::reposition_countdown_text_system.system(),
-            )
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                game_over::clear_game_over_message_on_restart.system(),
-            )
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                pause::reset_pause_button_on_restart.system(),
-            )
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                leaderboard::show_high_scores_on_score_saved.system(),
-            )
-            .add_system_to_stage(
-                stages::PREPARE_RENDER,
-                leaderboard::hide_high_scores_on_restart.system(),
+            // TODO: update comment above to me more accurate when I know how this works ^
+            .add_systems(
+                Update,
+                (
+                    score::update_score_text,
+                    score::change_color_on_game_over,
+                    score::revert_color_on_restart,
+                    game_over::show_game_over_text,
+                    player::update_coundown_text_system,
+                    player::show_countdown_on_restart,
+                    player::hide_countdown_on_game_over,
+                    player::reposition_countdown_text_system,
+                    game_over::clear_game_over_message_on_restart,
+                    pause::reset_pause_button_on_restart,
+                    leaderboard::show_high_scores_on_score_saved,
+                    leaderboard::hide_high_scores_on_restart,
+                )
+                    .in_set(stages::PrepareRenderSet),
             );
     }
 }
@@ -77,20 +53,20 @@ fn setup_ui(
     fonts: Res<FontHandles>,
     pause_button_materials: Res<pause::PauseButtonMaterials>,
 ) {
-    commands.spawn(CameraUiBundle::default());
+    // TODO: do we need this still?
+    // commands.spawn(Camera2dBundle::default());
 
     let root_ui_node = commands
         .spawn(NodeBundle {
             style: Style {
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 justify_content: JustifyContent::SpaceBetween,
                 ..Default::default()
             },
-            material: materials.add(Color::NONE.into()),
             ..Default::default()
         })
-        .current_entity()
-        .unwrap();
+        .id();
 
     debug!("Adding score text to UI...");
     let score_node = score::add_score_text(commands, &mut materials, &fonts);
@@ -113,14 +89,14 @@ fn setup_ui(
     );
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Resource)]
 pub(super) struct FontHandles {
     main_font: Handle<Font>,
 }
 
-impl FromResources for FontHandles {
-    fn from_resources(resources: &Resources) -> Self {
-        let asset_server = resources.get::<AssetServer>().unwrap();
+impl FromWorld for FontHandles {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.get_resource::<AssetServer>().unwrap();
         debug!("Loading fonts...");
         Self {
             main_font: asset_server.load("fonts/Chonkly.ttf"),

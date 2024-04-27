@@ -2,27 +2,25 @@ use bevy::prelude::*;
 
 use crate::shared::game::{GamePaused, GameRestarted, GameState, GameStates, GameUnpaused};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Resource)]
 pub(super) struct PauseButtonMaterials {
     pause: Handle<ColorMaterial>,
     play: Handle<ColorMaterial>,
 }
 
+#[derive(Debug, Component)]
 pub(super) struct PauseButton {
     is_paused: bool,
 }
 
-impl FromResources for PauseButtonMaterials {
-    fn from_resources(resources: &Resources) -> Self {
-        let asset_server = resources.get::<AssetServer>().unwrap();
-        let mut materials = resources.get_mut::<Assets<ColorMaterial>>().unwrap();
+impl FromWorld for PauseButtonMaterials {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.get_resource::<AssetServer>().unwrap();
 
         debug!("Loading pause button materials...");
         PauseButtonMaterials {
-            pause: materials.add(asset_server.load("sprites/ui/pause.png").into()),
-            play: materials.add(asset_server.load("sprites/ui/play.png").into()),
-            // pause: materials.add(Color::rgb(0.15, 0.15, 0.15).into()),
-            // play: materials.add(Color::rgb(0.15, 0.55, 0.0).into()),
+            pause: asset_server.load("sprites/ui/pause.png"),
+            play: asset_server.load("sprites/ui/play.png"),
         }
     }
 }
@@ -34,7 +32,7 @@ pub(super) fn pause_button_system(
     mut game_unpaused_events: ResMut<Events<GameUnpaused>>,
     mut interaction_query: Query<
         (&Interaction, &mut Handle<ColorMaterial>, &mut PauseButton),
-        Mutated<Interaction>,
+        Changed<Interaction>,
     >,
 ) {
     if let GameStates::GameOver = game_state.cur_state {
@@ -42,7 +40,7 @@ pub(super) fn pause_button_system(
     }
 
     for (interaction, mut material, mut pause_button) in interaction_query.iter_mut() {
-        if let Interaction::Clicked = *interaction {
+        if let Interaction::Pressed = *interaction {
             if pause_button.is_paused {
                 *material = pause_button_materials.pause.clone();
                 game_unpaused_events.send(GameUnpaused);
@@ -63,14 +61,7 @@ pub(super) fn add_pause_button(
 ) -> Entity {
     let pause_button = commands
         .spawn(NodeBundle {
-            style: Style {
-                ..Default::default()
-            },
-            material: materials.add(Color::NONE.into()),
-            visible: Visible {
-                is_visible: false,
-                ..Default::default()
-            },
+            visibility: Visibility::Hidden,
             ..Default::default()
         })
         .with_children(|parent| {

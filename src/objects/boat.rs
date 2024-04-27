@@ -51,24 +51,22 @@ impl FromWorld for BoatMaterials {
         let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
 
         BoatMaterials {
-            boat: materials.add(asset_server.load("sprites/boat/boat.png").into()),
-            line: materials.add(Color::BLACK.into()),
+            boat: materials.add(asset_server.load("sprites/boat/boat.png")),
+            line: materials.add(Color::BLACK),
             worm: Animation {
                 should_loop: true,
                 frames: vec![
                     AnimationFrame {
-                        material_handle: materials
-                            .add(asset_server.load("sprites/worm/worm1.png").into()),
+                        material_handle: materials.add(asset_server.load("sprites/worm/worm1.png")),
                         time: 0.5,
                     },
                     AnimationFrame {
-                        material_handle: materials
-                            .add(asset_server.load("sprites/worm/worm2.png").into()),
+                        material_handle: materials.add(asset_server.load("sprites/worm/worm2.png")),
                         time: 0.5,
                     },
                 ],
             },
-            hook: materials.add(asset_server.load("sprites/hook/hook.png").into()),
+            hook: materials.add(asset_server.load("sprites/hook/hook.png")),
         }
     }
 }
