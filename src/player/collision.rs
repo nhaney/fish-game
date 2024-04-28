@@ -67,19 +67,19 @@ pub(super) fn player_hook_collision_system(
     for (_, player_collider, player_transform, player_entity) in player_query.iter() {
         let player_pos = player_transform.translation;
         let player_half_size = player_collider.as_vec2_half_size();
-        let player_aabb = Aabb2d::new(player_pos, player_half_size);
+        let player_aabb = Aabb2d::new(player_pos.xy(), player_half_size);
         for (_, hook_collider, hook_transform, hook_entity) in hook_query.iter() {
-            let hook_pos = hook_transform.translation;
+            let hook_pos = hook_transform.translation();
             let hook_half_size = hook_collider.as_vec2_half_size();
-            let hook_aabb = Aabb2d::new(hook_pos, hook_half_size);
+            let hook_aabb = Aabb2d::new(hook_pos.xy(), hook_half_size);
 
-            if check_aabb_collision(player_aabb, hook_aabb) {
+            if check_aabb_collision(&player_aabb, &hook_aabb) {
                 debug!("Player collided with a hook!");
 
                 player_hooked_events.send(PlayerHooked {
                     player_entity,
                     hook_entity,
-                })
+                });
             }
         }
     }
@@ -96,17 +96,19 @@ pub(super) fn player_worm_collision_system(
     }
 
     for (_, player_collider, player_transform, player_entity) in player_query.iter() {
-        let player_aabb2d = get_aabb_from_transform_and_collider(player_transform, player_collider);
+        let player_aabb2d =
+            get_aabb_from_transform_and_collider(&player_transform.translation, &player_collider);
 
         for (_, worm_collider, worm_transform, worm_entity) in worm_query.iter() {
-            let worm_aabb2d = get_aabb_from_transform_and_collider(worm_transform, worm_collider);
+            let worm_aabb2d =
+                get_aabb_from_transform_and_collider(&worm_transform.translation(), worm_collider);
 
-            if check_aabb_collision(player_aabb2d, worm_aabb2d) {
+            if check_aabb_collision(&player_aabb2d, &worm_aabb2d) {
                 debug!("Player collided with a worm!");
                 player_ate_events.send(PlayerAte {
                     player_entity,
                     worm_entity,
-                })
+                });
             }
         }
     }
@@ -123,26 +125,28 @@ pub(super) fn player_boat_collision_system(
     }
 
     for (_, player_collider, player_transform, player_entity) in player_query.iter() {
-        let player_aabb2d = get_aabb_from_transform_and_collider(player_transform, player_collider);
+        let player_aabb2d =
+            get_aabb_from_transform_and_collider(&player_transform.translation, player_collider);
 
         for (_, boat_collider, boat_transform, boat_entity) in worm_query.iter() {
-            let boat_aabb2d = get_aabb_from_transform_and_collider(boat_transform, boat_collider);
+            let boat_aabb2d =
+                get_aabb_from_transform_and_collider(&boat_transform.translation, boat_collider);
 
-            if check_aabb_collision(player_aabb2d, boat_aabb2d) {
+            if check_aabb_collision(&player_aabb2d, &boat_aabb2d) {
                 debug!("Player collided with a boat!");
                 player_bonk_events.send(PlayerBonked {
                     player_entity,
                     boat_entity,
-                })
+                });
             }
         }
     }
 }
 
-fn get_aabb_from_transform_and_collider(transform: Transform, collider: Collider) {
-    Aabb2d::new(transform.translation, collider.as_vec2_half_size())
+fn get_aabb_from_transform_and_collider(&pos: &Vec3, collider: &Collider) -> Aabb2d {
+    Aabb2d::new(pos.xy(), collider.as_vec2_half_size())
 }
 
-fn check_aabb_collision(box1: Aabb2d, box2: Aabb2d) -> bool {
+fn check_aabb_collision(box1: &Aabb2d, box2: &Aabb2d) -> bool {
     return box1.intersects(box2.into());
 }

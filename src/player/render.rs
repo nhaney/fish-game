@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::utils::Duration;
 use bevy_prototype_lyon::prelude::*;
 use std::collections::HashMap;
 
@@ -19,10 +20,10 @@ pub(super) struct PlayerStateAnimations {
 impl FromWorld for PlayerStateAnimations {
     fn from_world(world: &mut World) -> Self {
         let asset_server = world.get_resource::<AssetServer>().unwrap();
-        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        // let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
 
-        let swim_1_handle = materials.add(asset_server.load("sprites/player/fish1.png").into());
-        let swim_2_handle = materials.add(asset_server.load("sprites/player/fish2.png").into());
+        let swim_1_handle = asset_server.load("sprites/player/fish1.png");
+        let swim_2_handle = asset_server.load("sprites/player/fish2.png");
 
         PlayerStateAnimations {
             map: [
@@ -96,7 +97,7 @@ pub(super) fn player_state_animation_change_system(
 
                 animation_state
                     .timer
-                    .set_duration(next_animation.frames[0].time);
+                    .set_duration(Duration::from_secs_f32(next_animation.frames[0].time));
                 animation_state.timer.reset();
                 // TODO: Find out how to remove this clone
                 animation_state.animation = next_animation.clone();
@@ -120,7 +121,7 @@ pub(super) fn player_state_animation_change_system(
 pub(super) struct BoostTracker;
 
 pub(super) fn spawn_player_boost_trackers(
-    mut commands: Commands,
+    commands: &mut Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
     player_width: f32,
@@ -131,8 +132,11 @@ pub(super) fn spawn_player_boost_trackers(
 ) {
     // calculate the positions of each of the boost trackers relative to the player
     // given the player's size and number of boosts
-    let pink_color = materials.add(Color::PINK.into());
-    let hot_pink_color = materials.add(Color::rgb_u8(255, 105, 180).into());
+    //let pink_color = materials.add(Color::PINK.into());
+    let pink_color = Color::PINK;
+
+    //let hot_pink_color = materials.add(Color::rgb_u8(255, 105, 180).into());
+    let hot_pink_color = Color::rgb_u8(255, 105, 180);
 
     debug!("Adding boost trackers for player {:?}...", player_entity);
 
@@ -222,9 +226,9 @@ pub(super) fn update_tracker_display_from_boost_supply(
             let mut tracker_visibility = tracker_query.get_mut(tracker_entity).unwrap();
 
             if (i + 1) <= boost_supply.count {
-                tracker_visibility = Visibility::Hidden;
+                *tracker_visibility = Visibility::Hidden;
             } else {
-                tracker_visibility = Visibility::Visible;
+                *tracker_visibility = Visibility::Visible;
             }
         }
     }
@@ -237,7 +241,7 @@ pub(super) fn despawn_trackers_on_gameover_or_restart(
     boost_tracker_query: Query<Entity, With<BoostTracker>>,
     player_query: Query<Entity, With<BoostTrackerDisplay>>,
 ) {
-    if game_over_reader.read().next() {
+    if game_over_reader.read().next().is_some() {
         for boost_tracker in boost_tracker_query.iter() {
             commands.entity(boost_tracker).despawn_recursive();
         }

@@ -64,7 +64,7 @@ pub(super) fn add_game_over_text(
                                     color: Color::RED,
                                 },
                             ),
-                            visibility: Visibility::Inherited..Default::default(),
+                            visibility: Visibility::Inherited,
                             ..Default::default()
                         },
                         RestartText,
@@ -109,7 +109,7 @@ pub(super) fn show_game_over_text(
     if game_over_message != *"" {
         for (mut game_over_draw, mut game_over_text) in game_over_text_query.iter_mut() {
             game_over_text.sections[0].value = game_over_message.clone();
-            game_over_draw = Visibility::Visible;
+            *game_over_draw = Visibility::Visible;
         }
 
         /* TODO: Remove this if the restart text is drawn. I think it should because it inherits
@@ -136,7 +136,7 @@ pub(super) fn clear_game_over_message_on_restart(
     if restart_reader.read().next().is_some() {
         debug!("Clearing game over text after game was restarted.");
         for mut game_over_draw in game_over_text_query.iter_mut() {
-            game_over_draw = Visibility::Hidden;
+            *game_over_draw = Visibility::Hidden;
         }
 
         /*

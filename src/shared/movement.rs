@@ -63,7 +63,7 @@ pub fn flip_transform_system(mut query: Query<(&SideScrollDirection, &mut Transf
 }
 
 pub fn check_distance_from_destination(
-    commands: &mut Commands,
+    mut commands: Commands,
     mut destination_reached_events: ResMut<Events<DestinationReached>>,
     mut query: Query<(&Destination, &mut Transform, Entity), With<Velocity>>,
 ) {
@@ -73,7 +73,7 @@ pub fn check_distance_from_destination(
         if distance_from_destination < destination.trigger_distance {
             debug!("Destination has been reached for {:?}", entity);
             destination_reached_events.send(DestinationReached { entity });
-            commands.remove::<(Velocity, Destination)>(entity);
+            commands.entity(entity).remove::<(Velocity, Destination)>();
             transform.translation = destination.point;
         }
     }
@@ -87,7 +87,8 @@ pub fn follow_system(
     for (follow_data, mut follower_transform) in follower_query.iter_mut() {
         if follow_data.follow_global_transform {
             if let Ok(target_transform) = global_transform_query.get(follow_data.entity_to_follow) {
-                follower_transform.translation = target_transform.translation + follow_data.offset;
+                follower_transform.translation =
+                    target_transform.translation() + follow_data.offset;
             }
         } else if let Ok(target_transform) = transform_query.get(follow_data.entity_to_follow) {
             follower_transform.translation = target_transform.translation + follow_data.offset;

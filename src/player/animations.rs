@@ -7,7 +7,7 @@ use crate::shared::{
 };
 
 pub(super) fn player_starved_handler(
-    commands: &mut Commands,
+    mut commands: Commands,
     arena: Res<Arena>,
     mut player_starved_reader: EventReader<PlayerStarved>,
     mut player_query: Query<(&mut Transform, &mut Velocity, &SideScrollDirection), With<Player>>,
@@ -23,7 +23,7 @@ pub(super) fn player_starved_handler(
             player_transform.translation.z,
         );
 
-        player_velocity.0 = Vec3::unit_y() * 100.0;
+        player_velocity.0 = Vec3::Y * 100.0;
 
         // flip depending on the direction the player is facing - probably a more mathy way to do this
         if player_facing.is_right() {
@@ -31,14 +31,15 @@ pub(super) fn player_starved_handler(
         } else {
             player_transform.rotation = Quat::from_rotation_z(std::f32::consts::PI);
         }
-        commands.remove_one::<SideScrollDirection>(player_starved_event.player_entity);
+        commands
+            .entity(player_starved_event.player_entity)
+            .remove::<SideScrollDirection>();
 
-        commands.insert_one(
-            player_starved_event.player_entity,
-            Destination {
+        commands
+            .entity(player_starved_event.player_entity)
+            .insert(Destination {
                 point: surface_point,
                 trigger_distance: 1.0,
-            },
-        );
+            });
     }
 }

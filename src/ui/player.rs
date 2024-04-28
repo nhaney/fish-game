@@ -8,10 +8,11 @@ use crate::shared::{
     game::{GameOver, GameRestarted},
 };
 
+#[derive(Component)]
 pub(super) struct PlayerCountdownText;
 
 // TODO: When bevy allows text to be a child of a parent entity, change this to not use the UI system.
-pub(super) fn add_countdown_text(commands: &mut Commands, fonts: Res<FontHandles>) {
+pub(super) fn add_countdown_text(mut commands: Commands, fonts: Res<FontHandles>) {
     commands
         .spawn(TextBundle {
             style: Style {
@@ -48,29 +49,34 @@ pub(super) fn update_coundown_text_system(
 ) {
     for mut text in text_query.iter_mut() {
         for hunger_countdown in player_query.iter() {
-            text.value = format!("{:.1}", hunger_countdown.time_left);
+            text.sections[0].value = format!("{:.1}", hunger_countdown.time_left);
             if hunger_countdown.time_left < 5.0 {
-                text.style.color = Color::RED;
+                text.sections[0].style.color = Color::RED;
             } else {
-                text.style.color = Color::PINK;
+                text.sections[0].style.color = Color::PINK;
             }
         }
     }
 }
 
-// repositions the countdown text to line up above player - when it is available, switch to canvas drawing
+// repositions the countdown text to line up above player
+// TODO: switch to canvas drawing Text2d?
 pub(super) fn reposition_countdown_text_system(
-    windows: Res<Windows>,
+    windows: Query<&Window>,
     mut text_query: Query<&mut Style, With<PlayerCountdownText>>,
     player_query: Query<(&Transform, &Collider), With<Player>>,
     camera_query: Query<(&Camera, &Transform)>,
 ) {
+    /*
     let (_, camera_transform) = camera_query
         .iter()
         .find(|(camera, _)| camera.name == Some(CAMERA_2D.to_string()))
         .unwrap();
+    */
 
-    let window = windows.get_primary().unwrap();
+    let (_, camera_transform) = camera_query.single();
+    let window = windows.single();
+
     let h = (window.height() / 2.0) as f32;
     let w = (window.width() / 2.0) as f32;
 
@@ -84,33 +90,31 @@ pub(super) fn reposition_countdown_text_system(
                 player_size.height / camera_transform.scale.y,
             );
 
-            style.position.left = Val::Px(player_window_pos.x - scaled_sprite_size.x / 2.0);
-            style.position.right = Val::Px(player_window_pos.x + scaled_sprite_size.x / 2.0);
-            style.position.bottom = Val::Px(player_window_pos.y + (scaled_sprite_size.y * 1.5));
+            style.left = Val::Px(player_window_pos.x - scaled_sprite_size.x / 2.0);
+            style.right = Val::Px(player_window_pos.x + scaled_sprite_size.x / 2.0);
+            style.bottom = Val::Px(player_window_pos.y + (scaled_sprite_size.y * 1.5));
         }
     }
 }
 
 pub(super) fn hide_countdown_on_game_over(
-    game_over_events: Res<Events<GameOver>>,
-    mut game_over_reader: Local<EventReader<GameOver>>,
-    mut countdown_text_query: Query<&mut Visible, With<PlayerCountdownText>>,
+    mut game_over_reader: EventReader<GameOver>,
+    mut countdown_text_query: Query<&mut Visibility, With<PlayerCountdownText>>,
 ) {
-    if game_over_reader.earliest(&game_over_events).is_some() {
+    if game_over_reader.read().next().is_some() {
         for mut countdown_text_visiblity in countdown_text_query.iter_mut() {
-            countdown_text_visiblity.is_visible = false;
+            *countdown_text_visiblity = Visibility::Visible;
         }
     }
 }
 
 pub(super) fn show_countdown_on_restart(
-    restart_events: Res<Events<GameRestarted>>,
-    mut restart_reader: Local<EventReader<GameRestarted>>,
-    mut countdown_text_query: Query<&mut Visible, With<PlayerCountdownText>>,
+    mut restart_reader: EventReader<GameRestarted>,
+    mut countdown_text_query: Query<&mut Visibility, With<PlayerCountdownText>>,
 ) {
-    if restart_reader.earliest(&restart_events).is_some() {
+    if restart_reader.read().next().is_some() {
         for mut countdown_text_visiblity in countdown_text_query.iter_mut() {
-            countdown_text_visiblity.is_visible = true;
+            *countdown_text_visiblity = Visibility::Visible;
         }
     }
 }

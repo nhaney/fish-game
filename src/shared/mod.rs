@@ -62,11 +62,11 @@ impl Plugin for SharedPlugin {
         app.init_resource::<rng::GameRng>()
             .insert_resource(game::Difficulty {
                 multiplier: 1,
-                timer: Timer::from_seconds(10.0, true),
+                timer: Timer::from_seconds(10.0, TimerMode::Repeating),
             })
             .insert_resource(game::Score {
                 count: 0,
-                timer: Timer::from_seconds(1.0, true),
+                timer: Timer::from_seconds(1.0, TimerMode::Repeating),
             })
             .insert_resource(game::GameState {
                 cur_state: game::GameStates::Running,
@@ -130,6 +130,6 @@ impl Plugin for SharedPlugin {
 #[derive(Component)]
 pub struct MainCamera;
 
-fn initialize_game(commands: &mut Commands) {
+fn initialize_game(mut commands: Commands) {
     commands.spawn((Camera2dBundle::default(), MainCamera));
 }

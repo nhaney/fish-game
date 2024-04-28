@@ -82,7 +82,7 @@ impl Plugin for PlayerPlugin {
                     render::update_tracker_display_from_boost_supply,
                 )
                     .in_set(stages::PrepareRenderSet),
-            )
+            );
     }
 }
 
@@ -91,12 +91,12 @@ const PLAYER_HEIGHT: f32 = 32.0;
 const PLAYER_MAX_BOOSTS: u8 = 3;
 
 fn init_player(
-    mut commands: &mut Commands,
+    mut commands: Commands,
     materials: ResMut<Assets<ColorMaterial>>,
     meshes: ResMut<Assets<Mesh>>,
     player_state_animations: Res<render::PlayerStateAnimations>,
 ) {
-    let player_entity = spawn_player_entity(commands, &player_state_animations);
+    let player_entity = spawn_player_entity(&mut commands, &player_state_animations);
     render::spawn_player_boost_trackers(
         &mut commands,
         materials,
@@ -110,7 +110,7 @@ fn init_player(
 
 // TODO: Make this support more than one player
 fn reset_player(
-    mut commands: &mut Commands,
+    mut commands: Commands,
     materials: ResMut<Assets<ColorMaterial>>,
     meshes: ResMut<Assets<Mesh>>,
     player_state_animations: Res<render::PlayerStateAnimations>,
@@ -121,10 +121,10 @@ fn reset_player(
         debug!("Despawning current player entity and creating a new one.");
         let player_entity = player_query.iter().next().unwrap();
         // despawn current player
-        commands.despawn_recursive(player_entity);
+        commands.entity(player_entity).despawn_recursive();
 
         // spawn a new player with new ui components
-        let new_player = spawn_player_entity(commands, &player_state_animations);
+        let new_player = spawn_player_entity(&mut commands, &player_state_animations);
         render::spawn_player_boost_trackers(
             &mut commands,
             materials,
@@ -173,28 +173,27 @@ fn spawn_player_entity(
                 current_state: states::PlayerStates::Idle,
                 blocked_transitions: HashSet::new(),
             },
-            Velocity(Vec3::zero()),
+            Velocity(Vec3::ZERO),
             SideScrollDirection(true),
             Collider {
                 width: PLAYER_WIDTH,
                 height: PLAYER_HEIGHT,
             },
             RenderLayer::Player,
-        ))
-        .with_bundle(SpriteBundle {
-            texture: first_animation_frame.material_handle.clone(),
-            sprite: Sprite {
-                custom_size: Some(Vec2::new(PLAYER_WIDTH, PLAYER_HEIGHT)),
+            SpriteBundle {
+                texture: first_animation_frame.material_handle.clone(),
+                sprite: Sprite {
+                    custom_size: Some(Vec2::new(PLAYER_WIDTH, PLAYER_HEIGHT)),
+                    ..Default::default()
+                },
                 ..Default::default()
             },
-            ..Default::default()
-        })
-        .with(AnimationState {
-            animation: player_animation.clone(),
-            timer: Timer::from_seconds(first_animation_frame.time, false),
-            frame_index: 0,
-            speed_multiplier: 1.0,
-        })
-        .current_entity()
-        .unwrap()
+            AnimationState {
+                animation: player_animation.clone(),
+                timer: Timer::from_seconds(first_animation_frame.time, TimerMode::Once),
+                frame_index: 0,
+                speed_multiplier: 1.0,
+            },
+        ))
+        .id()
 }

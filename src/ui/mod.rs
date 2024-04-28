@@ -48,7 +48,7 @@ impl Plugin for UIPlugin {
 }
 
 fn setup_ui(
-    commands: &mut Commands,
+    mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
     fonts: Res<FontHandles>,
     pause_button_materials: Res<pause::PauseButtonMaterials>,
@@ -69,24 +69,26 @@ fn setup_ui(
         .id();
 
     debug!("Adding score text to UI...");
-    let score_node = score::add_score_text(commands, &mut materials, &fonts);
+    let score_node = score::add_score_text(&mut commands, &mut materials, &fonts);
 
     debug!("Adding blank game over text to UI...");
-    let game_over_node = game_over::add_game_over_text(commands, &mut materials, &fonts);
+    let game_over_node = game_over::add_game_over_text(&mut commands, &mut materials, &fonts);
 
     debug!("Adding pause button to UI...");
     let pause_button_node =
-        pause::add_pause_button(commands, &pause_button_materials, &mut materials);
+        pause::add_pause_button(&mut commands, &pause_button_materials, &mut materials);
 
     debug!("Adding high scores to UI...");
     let leaderboard_node =
-        leaderboard::add_local_leaderboard_nodes(commands, &mut materials, &fonts);
-    commands.push_children(score_node, &[leaderboard_node]);
+        leaderboard::add_local_leaderboard_nodes(&mut commands, &mut materials, &fonts);
 
-    commands.push_children(
-        root_ui_node,
-        &[score_node, game_over_node, pause_button_node],
-    );
+    commands
+        .entity(score_node)
+        .push_children(&[leaderboard_node]);
+
+    commands
+        .entity(root_ui_node)
+        .push_children(&[score_node, game_over_node, pause_button_node]);
 }
 
 #[derive(Debug, Clone, Resource)]

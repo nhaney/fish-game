@@ -9,12 +9,12 @@ impl Plugin for ObjectPlugins {
     fn build(&self, app: &mut App) {
         debug!("Building object plugin...");
         app.insert_resource(boat::BoatSpawner {
-            spawn_timer: Timer::from_seconds(5.0, true),
+            spawn_timer: Timer::from_seconds(5.0, TimerMode::Repeating),
         })
         .init_resource::<boat::BoatMaterials>()
         .add_systems(
             Update,
-            (boat::boat_exit_system).in_set(stages::EmitEventsSet),
+            (boat::boat_exit_system,).in_set(stages::EmitEventsSet),
         )
         .add_systems(
             Update,
@@ -38,6 +38,6 @@ impl Plugin for ObjectPlugins {
                 boat::reset_boats_on_restart,
             )
                 .in_set(stages::PrepareRenderSet),
-        )
+        );
     }
 }

@@ -145,7 +145,7 @@ fn change_visibility_of_scoreboard(
         .get_mut(display.root_node)
         .unwrap();
 
-    container_visibilty = if is_visible {
+    *container_visibilty = if is_visible {
         Visibility::Visible
     } else {
         Visibility::Hidden
@@ -174,12 +174,12 @@ pub(super) fn show_high_scores_on_score_saved(
                 high_score_text.sections[0].value =
                     format!("{}. {}", i + 1, local_scores.scores[i]);
                 if i == 0 {
-                    high_score_text.style.color = Color::GOLD;
+                    high_score_text.sections[0].style.color = Color::GOLD;
                 } else if i == 1 {
-                    high_score_text.style.color = Color::SILVER;
+                    high_score_text.sections[0].style.color = Color::SILVER;
                 } else if i == 2 {
                     // bronze color
-                    high_score_text.style.color = Color::hex("cd7f32").unwrap();
+                    high_score_text.sections[0].style.color = Color::hex("cd7f32").unwrap();
                 }
             } else {
                 high_score_text.sections[0].value = "".to_string();
@@ -193,7 +193,7 @@ pub(super) fn hide_high_scores_on_restart(
     high_score_display: Res<HighScoreDisplay>,
     high_score_visibility_query: Query<&mut Visibility, With<HighScoreDisplayNode>>,
 ) {
-    if restart_reader.next().is_some() {
+    if restart_reader.read().next().is_some() {
         change_visibility_of_scoreboard(false, &high_score_display, high_score_visibility_query);
     }
 }

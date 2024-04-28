@@ -91,11 +91,11 @@ impl PlayerState {
             //     PlayerStates::Boost
             // );
             if boost_supply.use_boost() {
-                let boost_direction = if *target_speed == Vec3::zero() {
+                let boost_direction = if *target_speed == Vec3::ZERO {
                     if facing.is_right() {
-                        Vec3::unit_x()
+                        Vec3::X
                     } else {
-                        -Vec3::unit_x()
+                        -Vec3::X
                     }
                 } else {
                     target_speed.normalize()
@@ -105,33 +105,27 @@ impl PlayerState {
 
                 self.current_state = PlayerStates::Boost;
 
-                commands.insert(
-                    entity,
-                    (
-                        BoostCooldown {
-                            timer: Timer::from_seconds(player_stats.boost_cooldown, false),
-                            did_release: false,
-                        },
-                        BoostData {
-                            velocity: boost_direction * player_stats.boost_speed,
-                            timer: Timer::from_seconds(player_stats.boost_duration, false),
-                            prev_state,
-                        },
-                    ),
-                );
+                commands.entity(entity).insert((
+                    BoostCooldown {
+                        timer: Timer::from_seconds(player_stats.boost_cooldown, TimerMode::Once),
+                        did_release: false,
+                    },
+                    BoostData {
+                        velocity: boost_direction * player_stats.boost_speed,
+                        timer: Timer::from_seconds(player_stats.boost_duration, TimerMode::Once),
+                        prev_state,
+                    },
+                ));
 
                 // emit event that player boosted
                 player_boosted_events.send(PlayerBoosted { player: entity });
             } else {
                 // if the player was unable to boost, require that they release the boost
                 // button before attempting again
-                commands.insert_one(
-                    entity,
-                    BoostCooldown {
-                        timer: Timer::from_seconds(0.0, false),
-                        did_release: false,
-                    },
-                );
+                commands.entity(entity).insert(BoostCooldown {
+                    timer: Timer::from_seconds(0.0, TimerMode::Once),
+                    did_release: false,
+                });
             }
         }
     }
@@ -193,7 +187,7 @@ pub(super) fn swim_movement_system(
                 &mut boost_supply,
                 &mut boost_events,
             );
-        } else if target_speed != Vec3::zero() {
+        } else if target_speed != Vec3::ZERO {
             state.start_swim();
         } else {
             state.start_idle();
@@ -203,7 +197,7 @@ pub(super) fn swim_movement_system(
 
 /// Movement system for a boosting player
 pub(super) fn boost_movement_system(
-    commands: &mut Commands,
+    mut commands: Commands,
     time: Res<Time>,
     game_state: Res<GameState>,
     mut query: Query<(&mut BoostData, &mut PlayerState, &mut Velocity, Entity)>,
@@ -219,11 +213,11 @@ pub(super) fn boost_movement_system(
 
         velocity.0 = boost_data.velocity;
 
-        boost_data.timer.tick(time.delta_seconds());
+        boost_data.timer.tick(time.delta());
 
         if boost_data.timer.finished() {
             // debug!("Boost finished!");
-            commands.remove_one::<BoostData>(entity);
+            commands.entity(entity).remove::<BoostData>();
             match boost_data.prev_state {
                 PlayerStates::Idle => player_state.start_idle(),
                 PlayerStates::Swim => player_state.start_swim(),
@@ -239,7 +233,7 @@ of the boost cooldown and must release the boost button before being able
 to boost again.
 */
 pub(super) fn boost_cooldown_system(
-    commands: &mut Commands,
+    mut commands: Commands,
     time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     game_state: Res<GameState>,
@@ -250,14 +244,14 @@ pub(super) fn boost_cooldown_system(
     }
 
     for (mut boost_cooldown, mut player_state, entity) in query.iter_mut() {
-        boost_cooldown.timer.tick(time.delta_seconds());
+        boost_cooldown.timer.tick(time.delta());
 
         boost_cooldown.did_release =
             boost_cooldown.did_release || !keyboard_input.pressed(KeyCode::Space);
 
         if boost_cooldown.timer.finished() && boost_cooldown.did_release {
             // debug!("Boost cooldown finished. Boost can be used again.");
-            commands.remove_one::<BoostCooldown>(entity);
+            commands.entity(entity).remove::<BoostCooldown>();
             player_state
                 .blocked_transitions
                 .remove(&PlayerStates::Boost);

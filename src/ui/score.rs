@@ -4,6 +4,7 @@ use super::FontHandles;
 use crate::leaderboard::LocalScores;
 use crate::shared::game::{GameOver, GameRestarted, Score};
 
+#[derive(Component)]
 pub(super) struct ScoreText;
 
 pub(super) fn add_score_text(
@@ -61,38 +62,36 @@ pub(super) fn update_score_text(
     mut query: Query<&mut Text, With<ScoreText>>,
 ) {
     for mut text in query.iter_mut() {
-        text.value = format!("Score: {:?}", score.count);
+        text.sections[0].value = format!("Score: {:?}", score.count);
 
         if let Some(high_score) = local_scores.high_score() {
             if score.count > high_score {
-                text.style.color = Color::GOLD;
+                text.sections[0].style.color = Color::GOLD;
             }
         } else {
-            text.style.color = Color::GOLD;
+            text.sections[0].style.color = Color::GOLD;
         }
     }
 }
 
 pub(super) fn change_color_on_game_over(
-    game_over_events: Res<Events<GameOver>>,
-    mut game_over_reader: Local<EventReader<GameOver>>,
+    mut game_over_reader: EventReader<GameOver>,
     mut score_text_query: Query<&mut Text, With<ScoreText>>,
 ) {
-    if game_over_reader.earliest(&game_over_events).is_some() {
+    if game_over_reader.read().next().is_some() {
         for mut score_text in score_text_query.iter_mut() {
-            score_text.style.color = Color::RED;
+            score_text.sections[0].style.color = Color::RED;
         }
     }
 }
 
 pub(super) fn revert_color_on_restart(
-    restart_events: Res<Events<GameRestarted>>,
-    mut restart_reader: Local<EventReader<GameRestarted>>,
+    mut restart_reader: EventReader<GameRestarted>,
     mut score_text_query: Query<&mut Text, With<ScoreText>>,
 ) {
-    if restart_reader.earliest(&restart_events).is_some() {
+    if restart_reader.read().next().is_some() {
         for mut score_text in score_text_query.iter_mut() {
-            score_text.style.color = Color::GREEN;
+            score_text.sections[0].style.color = Color::GREEN;
         }
     }
 }

@@ -38,7 +38,7 @@ pub(super) fn restart_game(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut restart_events: ResMut<Events<GameRestarted>>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::R) {
+    if keyboard_input.just_pressed(KeyCode::KeyR) {
         restart_events.send(GameRestarted);
     }
 }
@@ -82,7 +82,7 @@ pub(super) fn difficulty_scaling_system(
         return;
     }
 
-    difficulty.timer.tick(time.delta_seconds());
+    difficulty.timer.tick(time.delta());
 
     if difficulty.timer.finished() && difficulty.multiplier < MAX_DIFFICULTY {
         difficulty.multiplier += 1;
@@ -99,7 +99,7 @@ pub(super) fn increment_score_system(
         return;
     }
 
-    score.timer.tick(time.delta_seconds());
+    score.timer.tick(time.delta());
 
     if score.timer.finished() {
         score.count += 1;
@@ -170,7 +170,7 @@ pub(super) fn reset_score_on_restart(
     if restart_reader.read().next().is_some() {
         debug!("Resetting score after restart");
         score.count = 0;
-        score.timer = Timer::from_seconds(1.0, true);
+        score.timer = Timer::from_seconds(1.0, TimerMode::Repeating);
     }
 }
 

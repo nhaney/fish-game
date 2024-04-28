@@ -89,12 +89,11 @@ pub(super) fn add_pause_button(
 }
 
 pub(super) fn reset_pause_button_on_restart(
-    restart_events: Res<Events<GameRestarted>>,
-    mut restart_reader: Local<EventReader<GameRestarted>>,
+    mut restart_reader: EventReader<GameRestarted>,
     pause_button_materials: Res<PauseButtonMaterials>,
     mut pause_button_query: Query<(&mut Handle<ColorMaterial>, &mut PauseButton)>,
 ) {
-    if restart_reader.earliest(&restart_events).is_some() {
+    if restart_reader.read().next().is_some() {
         for (mut material, mut pause_button) in pause_button_query.iter_mut() {
             *material = pause_button_materials.pause.clone();
             pause_button.is_paused = false;

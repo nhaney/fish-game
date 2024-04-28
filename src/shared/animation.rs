@@ -1,13 +1,14 @@
 use bevy::prelude::*;
+use bevy::utils::Duration;
 
 use super::game::GameState;
 
 /**
 Represents one frame of animation.
-*/
+**/
 #[derive(Debug, Clone, PartialEq)]
 pub struct AnimationFrame {
-    pub material_handle: Handle<ColorMaterial>,
+    pub material_handle: Handle<Image>,
     pub time: f32,
 }
 
@@ -33,7 +34,7 @@ impl AnimationState {
         debug!("speed multiplier: {:?}", speed_multiplier);
         AnimationState {
             animation: animation.clone(),
-            timer: Timer::from_seconds(animation.frames[0].time, false),
+            timer: Timer::from_seconds(animation.frames[0].time, TimerMode::Once),
             frame_index: 0,
             speed_multiplier,
         }
@@ -44,7 +45,7 @@ impl AnimationState {
 pub(super) fn animation_system(
     time: Res<Time>,
     game_state: Res<GameState>,
-    mut query: Query<(&mut AnimationState, &mut Handle<ColorMaterial>)>,
+    mut query: Query<(&mut AnimationState, &mut Handle<Image>)>,
 ) {
     if !game_state.is_running() {
         return;
@@ -54,7 +55,7 @@ pub(super) fn animation_system(
         let speed_multiplier = animation_state.speed_multiplier;
         animation_state
             .timer
-            .tick(time.delta_seconds() * speed_multiplier);
+            .tick(time.delta() * speed_multiplier as u32);
 
         if animation_state.timer.finished() {
             let cur_animation = &animation_state.animation;
@@ -71,7 +72,9 @@ pub(super) fn animation_system(
 
             animation_state.frame_index = next_frame_index;
 
-            animation_state.timer.set_duration(next_frame.time);
+            animation_state
+                .timer
+                .set_duration(Duration::from_secs_f32(next_frame.time));
             animation_state.timer.reset();
 
             *material_handle = next_frame.material_handle.clone();

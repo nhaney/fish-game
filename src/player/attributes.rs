@@ -100,7 +100,7 @@ pub(super) fn hunger_countdown_system(
         if hunger_countdown.time_left < 0.0 {
             // emit starved event for entity
             debug!("Player starved!");
-            starved_event_writer.send(PlayerStarved { player_entity })
+            starved_event_writer.send(PlayerStarved { player_entity });
         }
     }
 }
