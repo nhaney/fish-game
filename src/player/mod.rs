@@ -71,6 +71,7 @@ impl Plugin for PlayerPlugin {
                     collision::player_bounds_system,
                     collision::player_hook_collision_system,
                     collision::player_worm_collision_system,
+                    collision::player_boat_collision_system,
                 )
                     .in_set(stages::AdjustPositionsSet),
             )
