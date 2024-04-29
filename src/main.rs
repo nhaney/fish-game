@@ -30,7 +30,7 @@ fn main() {
                 ..default()
             }),
             LogDiagnosticsPlugin::default(),
-            FrameTimeDiagnosticsPlugin,
+            //FrameTimeDiagnosticsPlugin,
             shared::SharedPlugin,
             leaderboard::LeaderboardPlugin,
             player::PlayerPlugin,

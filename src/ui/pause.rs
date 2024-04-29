@@ -4,8 +4,8 @@ use crate::shared::game::{GamePaused, GameRestarted, GameState, GameStates, Game
 
 #[derive(Debug, Clone, Resource)]
 pub(super) struct PauseButtonMaterials {
-    pause: Handle<ColorMaterial>,
-    play: Handle<ColorMaterial>,
+    pause: Handle<Image>,
+    play: Handle<Image>,
 }
 
 #[derive(Debug, Component)]
@@ -31,7 +31,7 @@ pub(super) fn pause_button_system(
     mut game_paused_events: ResMut<Events<GamePaused>>,
     mut game_unpaused_events: ResMut<Events<GameUnpaused>>,
     mut interaction_query: Query<
-        (&Interaction, &mut Handle<ColorMaterial>, &mut PauseButton),
+        (&Interaction, &mut UiImage, &mut PauseButton),
         Changed<Interaction>,
     >,
 ) {
@@ -39,13 +39,13 @@ pub(super) fn pause_button_system(
         return;
     }
 
-    for (interaction, mut material, mut pause_button) in interaction_query.iter_mut() {
+    for (interaction, mut ui_image, mut pause_button) in interaction_query.iter_mut() {
         if let Interaction::Pressed = *interaction {
             if pause_button.is_paused {
-                *material = pause_button_materials.pause.clone();
+                ui_image.texture = pause_button_materials.pause.clone();
                 game_unpaused_events.send(GameUnpaused);
             } else {
-                *material = pause_button_materials.play.clone();
+                ui_image.texture = pause_button_materials.play.clone();
                 game_paused_events.send(GamePaused);
             }
 
@@ -65,25 +65,26 @@ pub(super) fn add_pause_button(
             ..Default::default()
         })
         .with_children(|parent| {
-            parent
-                .spawn(ButtonBundle {
+            parent.spawn((
+                ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Px(64.0), Val::Px(64.0)),
+                        width: Val::Px(64.0),
+                        height: Val::Px(64.0),
                         align_self: AlignSelf::FlexEnd,
-                        margin: Rect {
+                        margin: UiRect {
                             top: Val::Percent(5.0),
                             right: Val::Percent(5.0),
                             ..Default::default()
                         },
                         ..Default::default()
                     },
-                    material: pause_button_materials.pause.clone(),
+                    image: UiImage::new(pause_button_materials.pause.clone()),
                     ..Default::default()
-                })
-                .with(PauseButton { is_paused: false });
+                },
+                PauseButton { is_paused: false },
+            ));
         })
-        .current_entity()
-        .unwrap();
+        .id();
 
     pause_button
 }
@@ -91,11 +92,11 @@ pub(super) fn add_pause_button(
 pub(super) fn reset_pause_button_on_restart(
     mut restart_reader: EventReader<GameRestarted>,
     pause_button_materials: Res<PauseButtonMaterials>,
-    mut pause_button_query: Query<(&mut Handle<ColorMaterial>, &mut PauseButton)>,
+    mut pause_button_query: Query<(&mut UiImage, &mut PauseButton)>,
 ) {
     if restart_reader.read().next().is_some() {
-        for (mut material, mut pause_button) in pause_button_query.iter_mut() {
-            *material = pause_button_materials.pause.clone();
+        for (mut ui_image, mut pause_button) in pause_button_query.iter_mut() {
+            ui_image.texture = pause_button_materials.pause.clone();
             pause_button.is_paused = false;
         }
     }

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy::render::{camera::Camera, render_graph::base::camera::CAMERA_2D};
+use bevy::render::camera::Camera;
 
 use super::FontHandles;
 use crate::player::attributes::{HungerCountdown, Player};
@@ -13,33 +13,31 @@ pub(super) struct PlayerCountdownText;
 
 // TODO: When bevy allows text to be a child of a parent entity, change this to not use the UI system.
 pub(super) fn add_countdown_text(mut commands: Commands, fonts: Res<FontHandles>) {
-    commands
-        .spawn(TextBundle {
+    commands.spawn((
+        TextBundle {
             style: Style {
                 position_type: PositionType::Absolute,
-                position: Rect {
-                    top: Val::Px(100.0),
-                    left: Val::Px(100.0),
-                    right: Val::Px(100.0),
-                    bottom: Val::Px(100.0),
-                },
+                top: Val::Px(100.0),
+                left: Val::Px(100.0),
+                right: Val::Px(100.0),
+                bottom: Val::Px(100.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
                 ..Default::default()
             },
-            text: Text {
-                value: "30.0".to_string(),
-                font: fonts.main_font.clone(),
-                style: TextStyle {
+            text: Text::from_section(
+                "30.0".to_string(),
+                TextStyle {
+                    font: fonts.main_font.clone(),
                     font_size: 30.0,
-                    alignment: TextAlignment {
-                        vertical: VerticalAlign::Center,
-                        horizontal: HorizontalAlign::Center,
-                    },
                     ..Default::default()
                 },
-            },
-            ..Default::default()
-        })
-        .with(PlayerCountdownText);
+            )
+            .with_justify(JustifyText::Center),
+            ..default()
+        },
+        PlayerCountdownText,
+    ));
 }
 
 //updates countdown text

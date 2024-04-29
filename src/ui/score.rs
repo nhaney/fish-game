@@ -19,27 +19,23 @@ pub(super) fn add_score_text(
                 flex_direction: FlexDirection::ColumnReverse,
                 ..Default::default()
             },
-            material: materials.add(Color::NONE.into()),
-            visible: Visible {
-                is_visible: false,
-                ..Default::default()
-            },
+            visibility: Visibility::Hidden,
             ..Default::default()
         })
         .with_children(|parent| {
-            parent
-                .spawn(TextBundle {
-                    text: Text {
-                        value: "Score:".to_string(),
-                        font: fonts.main_font.clone(),
-                        style: TextStyle {
+            parent.spawn((
+                TextBundle {
+                    text: Text::from_section(
+                        "Score:".to_string(),
+                        TextStyle {
+                            font: fonts.main_font.clone(),
                             font_size: 60.0,
                             color: Color::GREEN,
                             ..Default::default()
                         },
-                    },
+                    ),
                     style: Style {
-                        margin: Rect {
+                        margin: UiRect {
                             top: Val::Percent(5.0),
                             left: Val::Percent(5.0),
                             ..Default::default()
@@ -47,11 +43,11 @@ pub(super) fn add_score_text(
                         ..Default::default()
                     },
                     ..Default::default()
-                })
-                .with(ScoreText);
+                },
+                ScoreText,
+            ));
         })
-        .current_entity()
-        .unwrap();
+        .id();
 
     root_score_node
 }

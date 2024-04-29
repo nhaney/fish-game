@@ -28,7 +28,7 @@
                         pkg-config
 
                         udev alsa-lib vulkan-loader
-                        xorg.libX11 xorg.libXcursor xorg.libXi xorg.libXrandr
+                        xorg.libX11 xorg.libXcursor xorg.libXi xorg.libXrandr libxkbcommon
                     ];
 
                     LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath packages;
