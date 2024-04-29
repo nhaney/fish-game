@@ -2,6 +2,7 @@ use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     prelude::*,
     window::{PresentMode, WindowMode},
+    winit::winit_window_position,
 };
 
 mod audio;
@@ -15,21 +16,29 @@ fn main() {
     App::new()
         .insert_resource(ClearColor(Color::rgb_u8(230, 202, 173)))
         .add_plugins((
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Stay Off the Line!".to_string(),
-                    resolution: (1280., 720.).into(),
-                    present_mode: PresentMode::AutoNoVsync,
-                    prevent_default_event_handling: false,
-                    #[cfg(target_arch = "wasm32")]
-                    canvas: Some("#fish-game".to_string()),
-                    resizable: true,
-                    mode: WindowMode::Windowed,
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Stay Off the Line!".to_string(),
+                        resolution: (1280., 720.).into(),
+                        present_mode: PresentMode::AutoNoVsync,
+                        prevent_default_event_handling: false,
+                        #[cfg(target_arch = "wasm32")]
+                        canvas: Some("#fish-game".to_string()),
+                        resizable: true,
+                        mode: WindowMode::Windowed,
+                        ..default()
+                    }),
+                    ..default()
+                })
+                .set(bevy::log::LogPlugin {
+                    level: bevy::log::Level::DEBUG,
                     ..default()
                 }),
+            LogDiagnosticsPlugin {
+                debug: true,
                 ..default()
-            }),
-            LogDiagnosticsPlugin::default(),
+            },
             //FrameTimeDiagnosticsPlugin,
             shared::SharedPlugin,
             leaderboard::LeaderboardPlugin,

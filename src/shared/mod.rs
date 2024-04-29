@@ -13,7 +13,7 @@ pub struct SharedPlugin;
 
 impl Plugin for SharedPlugin {
     fn build(&self, app: &mut App) {
-        debug!("Building shared plugin...");
+        info!("Building shared plugin...");
 
         // Configure ordering of custom system sets.
         app.configure_sets(

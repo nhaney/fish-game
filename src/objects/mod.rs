@@ -14,7 +14,7 @@ impl Plugin for ObjectPlugins {
         .init_resource::<boat::BoatMaterials>()
         .add_systems(
             Update,
-            (boat::boat_exit_system,).in_set(stages::EmitEventsSet),
+            (boat::boat_exit_system, boat::boat_spawner_system).in_set(stages::EmitEventsSet),
         )
         .add_systems(
             Update,
