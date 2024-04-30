@@ -34,7 +34,6 @@ pub(super) fn setup_pause_button(
             style: Style {
                 width: Val::Px(64.0),
                 height: Val::Px(64.0),
-                align_self: AlignSelf::FlexEnd,
                 margin: UiRect {
                     top: Val::Percent(5.0),
                     right: Val::Percent(5.0),

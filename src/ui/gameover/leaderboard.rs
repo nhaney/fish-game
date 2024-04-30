@@ -28,17 +28,19 @@ pub(super) fn spawn_leaderboard_display(
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::FlexStart,
                 justify_content: JustifyContent::SpaceEvenly,
+                /*
                 margin: UiRect {
                     top: Val::Percent(5.0),
                     bottom: Val::Percent(20.0),
                     left: Val::Percent(5.0),
                     ..Default::default()
-                },
+                },*/
                 /*size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),*/
-                flex_grow: 1.0,
+                //flex_grow: 1.0,
                 ..Default::default()
             },
             visibility: Visibility::Hidden,
+            background_color: BackgroundColor(Color::GREEN),
             ..Default::default()
         },))
         .with_children(|builder| {

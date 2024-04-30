@@ -13,9 +13,10 @@ Goals:
 
 * [ ] UI refactoring
     * [ ] Make entire UI be one tree under a root node and arranged with flexbox + component tags.
-        * [ ] Score works
-        * [ ] Leaderboard UI works
+        * [x] Score works
+        * [x] Leaderboard UI works
         * [ ] Make pause button work
+        * [ ] Gameover text works
     * [ ] Move countdown text from being a part of UI to being a TextBundle2d above the player
 * [ ] Use bevy primitives introduced in 0.13 instead of bevy_prototype_lyon for
     * [ ] lines (Line2d?, Rect + rope texture?)

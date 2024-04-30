@@ -55,6 +55,18 @@ fn compose_gameover_hud(
         .get_single()
         .expect("Could not find game over message root node to compose into gameover HUD");
 
+    let dummy = commands
+        .spawn(NodeBundle {
+            style: Style {
+                flex_grow: 1.,
+                ..default()
+            },
+            background_color: BackgroundColor(Color::YELLOW),
+            visibility: Visibility::Visible,
+            ..default()
+        })
+        .id();
+
     commands
         .spawn((
             NodeBundle {
@@ -62,12 +74,13 @@ fn compose_gameover_hud(
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
                     justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::Center,
                     ..Default::default()
                 },
-                visibility: Visibility::Hidden,
+                visibility: Visibility::Visible,
                 ..Default::default()
             },
             GameOverHudRoot,
         ))
-        .push_children(&[leaderboard_root_node, game_over_message_root_node]);
+        .push_children(&[leaderboard_root_node, game_over_message_root_node, dummy]);
 }
