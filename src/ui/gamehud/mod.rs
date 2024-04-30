@@ -18,7 +18,7 @@ impl Plugin for GameHudPlugin {
             .add_systems(Startup, (compose_game_hud,))
             .add_systems(
                 Startup,
-                (score::setup_score_display, pause::setup_pause_button).after(compose_game_hud),
+                (score::setup_score_display, pause::setup_pause_button).before(compose_game_hud),
             )
             .add_systems(
                 Update,
