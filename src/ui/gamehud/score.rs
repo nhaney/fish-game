@@ -1,55 +1,37 @@
 use bevy::prelude::*;
 
-use super::FontHandles;
 use crate::leaderboard::LocalScores;
 use crate::shared::game::{GameOver, GameRestarted, Score};
+use crate::ui::common::FontHandles;
 
 #[derive(Component)]
 pub(super) struct ScoreText;
 
-pub(super) fn add_score_text(
-    commands: &mut Commands,
-    materials: &mut Assets<ColorMaterial>,
-    fonts: &FontHandles,
-) -> Entity {
-    let root_score_node = commands
-        .spawn(NodeBundle {
-            style: Style {
-                align_items: AlignItems::FlexStart,
-                flex_direction: FlexDirection::ColumnReverse,
-                ..Default::default()
-            },
-            visibility: Visibility::Hidden,
-            ..Default::default()
-        })
-        .with_children(|parent| {
-            parent.spawn((
-                TextBundle {
-                    text: Text::from_section(
-                        "Score:".to_string(),
-                        TextStyle {
-                            font: fonts.main_font.clone(),
-                            font_size: 60.0,
-                            color: Color::GREEN,
-                            ..Default::default()
-                        },
-                    ),
-                    style: Style {
-                        margin: UiRect {
-                            top: Val::Percent(5.0),
-                            left: Val::Percent(5.0),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
+/// Startup system that is responsible for adding the score display to UI.
+pub fn setup_score_display(mut commands: Commands, fonts: Res<FontHandles>) {
+    commands.spawn((
+        TextBundle {
+            text: Text::from_section(
+                "Score:".to_string(),
+                TextStyle {
+                    font: fonts.main_font.clone(),
+                    font_size: 60.0,
+                    color: Color::GREEN,
                     ..Default::default()
                 },
-                ScoreText,
-            ));
-        })
-        .id();
-
-    root_score_node
+            ),
+            style: Style {
+                margin: UiRect {
+                    top: Val::Percent(5.0),
+                    left: Val::Percent(5.0),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        ScoreText,
+    ));
 }
 
 pub(super) fn update_score_text(
@@ -70,6 +52,7 @@ pub(super) fn update_score_text(
     }
 }
 
+// TODO: Change this to only trigger when game over state is entered.
 pub(super) fn change_color_on_game_over(
     mut game_over_reader: EventReader<GameOver>,
     mut score_text_query: Query<&mut Text, With<ScoreText>>,
@@ -81,6 +64,7 @@ pub(super) fn change_color_on_game_over(
     }
 }
 
+// TODO: Change this to only trigger when ingame state is entered.
 pub(super) fn revert_color_on_restart(
     mut restart_reader: EventReader<GameRestarted>,
     mut score_text_query: Query<&mut Text, With<ScoreText>>,

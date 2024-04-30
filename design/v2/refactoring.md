@@ -7,7 +7,8 @@
 ### Things to fix after upgrade
 
 Goals:
-    * I want the codebase to be in a similar state, just working properly with the new version.
+    * I want the codebase to be in a similar state in terms of organization and functionality, just working properly with the new version.
+    * Get rid of all warnings
     * Things that are not idiomatic bevy should be changed if they are not a part of the bigger refactoring later.
 
 * [ ] UI refactoring
@@ -17,7 +18,7 @@ Goals:
         * [ ] Make pause button work
     * [ ] Move countdown text from being a part of UI to being a TextBundle2d above the player
 * [ ] Use bevy primitives introduced in 0.13 instead of bevy_prototype_lyon for
-    * [ ] lines (Line2d?)
+    * [ ] lines (Line2d?, Rect + rope texture?)
     * [ ] trackers (Circle)
 * [ ] Fix collisions
     * [ ] Debug collider drawing
@@ -36,14 +37,26 @@ Goals:
 
 ### Input/Output draft
 
+Initialization:
+```rust
+/// Initialization configuration for the fish game.
+struct FishGameConfig {
+    pub tick_rate: u32;
+}
+```
 Input:
-```json
-{
+```rust
+/// Inputs for this tick of the fish game.
+struct FishGameInput {
 }
 ```
 
 Output:
-```json
-{
+```rust
+/// Contains all information about the state of the fish game.
+struct FishGameState {
 }
+
+let fish_game = FishGameState::new(config: FishGameConfig);
+let next_state = fish_game.tick(input: FishGameInput);
 ```

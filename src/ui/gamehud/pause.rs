@@ -4,8 +4,8 @@ use crate::shared::game::{GamePaused, GameRestarted, GameState, GameStates, Game
 
 #[derive(Debug, Clone, Resource)]
 pub(super) struct PauseButtonMaterials {
-    pause: Handle<Image>,
-    play: Handle<Image>,
+    pub pause: Handle<Image>,
+    pub play: Handle<Image>,
 }
 
 #[derive(Debug, Component)]
@@ -23,6 +23,30 @@ impl FromWorld for PauseButtonMaterials {
             play: asset_server.load("sprites/ui/play.png"),
         }
     }
+}
+
+pub(super) fn setup_pause_button(
+    mut commands: Commands,
+    pause_button_materials: Res<PauseButtonMaterials>,
+) {
+    commands.spawn((
+        ButtonBundle {
+            style: Style {
+                width: Val::Px(64.0),
+                height: Val::Px(64.0),
+                align_self: AlignSelf::FlexEnd,
+                margin: UiRect {
+                    top: Val::Percent(5.0),
+                    right: Val::Percent(5.0),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            image: UiImage::new(pause_button_materials.pause.clone()),
+            ..Default::default()
+        },
+        PauseButton { is_paused: false },
+    ));
 }
 
 pub(super) fn pause_button_system(
@@ -53,42 +77,6 @@ pub(super) fn pause_button_system(
         }
     }
 }
-
-pub(super) fn add_pause_button(
-    commands: &mut Commands,
-    pause_button_materials: &PauseButtonMaterials,
-    materials: &mut Assets<ColorMaterial>,
-) -> Entity {
-    let pause_button = commands
-        .spawn(NodeBundle {
-            visibility: Visibility::Hidden,
-            ..Default::default()
-        })
-        .with_children(|parent| {
-            parent.spawn((
-                ButtonBundle {
-                    style: Style {
-                        width: Val::Px(64.0),
-                        height: Val::Px(64.0),
-                        align_self: AlignSelf::FlexEnd,
-                        margin: UiRect {
-                            top: Val::Percent(5.0),
-                            right: Val::Percent(5.0),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    image: UiImage::new(pause_button_materials.pause.clone()),
-                    ..Default::default()
-                },
-                PauseButton { is_paused: false },
-            ));
-        })
-        .id();
-
-    pause_button
-}
-
 pub(super) fn reset_pause_button_on_restart(
     mut restart_reader: EventReader<GameRestarted>,
     pause_button_materials: Res<PauseButtonMaterials>,
