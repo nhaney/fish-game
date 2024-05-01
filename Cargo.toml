@@ -24,7 +24,7 @@ edition = "2021"
 #]
 
 [dependencies]
-bevy = "0.13.2"
+bevy = { version = "0.13.2", features = ["dynamic_linking"] }
 bevy_prototype_lyon = "0.11"
 
 #bevy = { git = "https://github.com/bevyengine/bevy", rev = "841755aaf23acfd55b375c37390daeb302c5b30b", default-features = false }
@@ -66,6 +66,9 @@ serde_json = "1.0"
 
 [profile.dev]
 opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
 
 [profile.release]
 lto = true

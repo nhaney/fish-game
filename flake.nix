@@ -29,6 +29,8 @@
 
                         udev alsa-lib vulkan-loader
                         xorg.libX11 xorg.libXcursor xorg.libXi xorg.libXrandr libxkbcommon
+
+                        clang mold
                     ];
 
                     LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath packages;
