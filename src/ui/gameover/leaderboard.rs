@@ -28,6 +28,9 @@ pub(super) fn spawn_leaderboard_display(
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::FlexStart,
                 justify_content: JustifyContent::SpaceEvenly,
+                flex_grow: 1.,
+                flex_shrink: 1.,
+                flex_basis: Val::Px(0.),
                 /*
                 margin: UiRect {
                     top: Val::Percent(5.0),
@@ -40,7 +43,6 @@ pub(super) fn spawn_leaderboard_display(
                 ..Default::default()
             },
             visibility: Visibility::Hidden,
-            background_color: BackgroundColor(Color::GREEN),
             ..Default::default()
         },))
         .with_children(|builder| {

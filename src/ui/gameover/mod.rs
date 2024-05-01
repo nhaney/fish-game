@@ -59,10 +59,11 @@ fn compose_gameover_hud(
         .spawn(NodeBundle {
             style: Style {
                 flex_grow: 1.,
+                flex_shrink: 1.,
+                flex_basis: Val::Px(0.),
                 ..default()
             },
-            background_color: BackgroundColor(Color::YELLOW),
-            visibility: Visibility::Visible,
+            visibility: Visibility::Hidden,
             ..default()
         })
         .id();

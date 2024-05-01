@@ -21,10 +21,11 @@ pub(super) fn spawn_gameover_message_display(mut commands: Commands, fonts: Res<
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
+                    flex_grow: 1.,
+                    flex_shrink: 1.,
                     ..Default::default()
                 },
                 visibility: Visibility::Hidden,
-                background_color: BackgroundColor(Color::PURPLE),
                 ..Default::default()
             },
             GameOverMessageRootNode,
