@@ -151,7 +151,6 @@ pub(super) fn boat_spawner_system(
     boat_materials: Res<BoatMaterials>,
     mut rng: ResMut<GameRng>,
     mut boat_spawner: ResMut<BoatSpawner>,
-    mut meshes: ResMut<Assets<Mesh>>,
 ) {
     if !game_state.is_running() {
         return;
@@ -162,14 +161,7 @@ pub(super) fn boat_spawner_system(
     if boat_spawner.spawn_timer.finished() {
         for _ in 0..rng.rng.gen_range(1..difficulty.multiplier + 1) {
             let stats = boat_stats_factory(difficulty.multiplier, &mut rng.rng);
-            spawn_boat(
-                stats,
-                &mut commands,
-                &boat_materials,
-                &mut meshes,
-                &arena,
-                &mut rng.rng,
-            );
+            spawn_boat(stats, &mut commands, &boat_materials, &arena, &mut rng.rng);
         }
     }
 }
@@ -178,7 +170,6 @@ fn spawn_boat(
     stats: BoatStats,
     commands: &mut Commands,
     boat_materials: &BoatMaterials,
-    meshes: &mut ResMut<Assets<Mesh>>,
     arena: &Arena,
     rng: &mut ChaCha8Rng,
 ) {
@@ -218,7 +209,7 @@ fn spawn_boat(
                 width: stats.width,
                 height: stats.height,
             },
-            SideScrollDirection(facing_right),
+            //SideScrollDirection(facing_right),
             Boat,
             RenderLayer::Objects,
             SpriteBundle {
@@ -236,7 +227,7 @@ fn spawn_boat(
             },
         ))
         .with_children(|parent| {
-            spawn_lines(&stats, rng, parent, boat_materials, meshes);
+            spawn_lines(&stats, rng, parent, boat_materials);
         });
 }
 
@@ -251,7 +242,6 @@ fn spawn_lines(
     rng: &mut ChaCha8Rng,
     parent: &mut ChildBuilder,
     boat_materials: &BoatMaterials,
-    meshes: &mut ResMut<Assets<Mesh>>,
 ) {
     // all poles start above the top of the boat at the same y position
     let hook_material = boat_materials.hook.clone();
@@ -444,16 +434,10 @@ pub(super) fn despawn_boat_system(
 pub(super) fn boat_exit_system(
     mut commands: Commands,
     mut game_over_reader: EventReader<GameOver>,
-    mut query: Query<(
-        &Boat,
-        &mut SideScrollDirection,
-        &mut Velocity,
-        &Transform,
-        Entity,
-    )>,
+    mut query: Query<(&Boat, &mut Velocity, &mut Transform, Entity)>,
 ) {
     if let Some(game_over_event) = game_over_reader.read().next() {
-        for (_, mut direction, mut velocity, transform, entity) in query.iter_mut() {
+        for (_, mut velocity, mut transform, entity) in query.iter_mut() {
             if Some(entity) == game_over_event.winning_boat {
                 // remove the velocity of the boat that got the fish so it stays on screen
                 commands.entity(entity).remove::<Velocity>();
@@ -461,15 +445,15 @@ pub(super) fn boat_exit_system(
             }
 
             // turn boat around if they havent passed halfway across the screen
-            if transform.translation.x < 0.0 && direction.is_right()
-                || transform.translation.x > 0.0 && direction.is_left()
-            {
-                direction.0 = !direction.0;
-                velocity.0.x *= -1.0;
+            if transform.translation.x < 0.0 {
+                transform.rotation = Quat::from_rotation_y(std::f32::consts::PI);
+                velocity.0.x = -velocity.0.x.abs();
+            } else {
+                transform.rotation = Quat::from_rotation_y(0.0);
+                velocity.0.x = velocity.0.x.abs();
             }
 
-            // make it go faster off the screen
-            velocity.0 *= 2.0;
+            velocity.0.x *= 2.;
         }
     }
 }

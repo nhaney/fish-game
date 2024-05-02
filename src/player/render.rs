@@ -8,7 +8,6 @@ use super::states::{PlayerState, PlayerStates};
 use crate::shared::{
     animation::{Animation, AnimationFrame, AnimationState},
     game::{GameOver, GameRestarted},
-    render::RenderLayer,
 };
 
 #[derive(Resource)]

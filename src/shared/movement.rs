@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite};
 
 use super::game::{GameState, GameStates};
 
@@ -52,12 +52,24 @@ pub fn movement_system(
     }
 }
 
-pub fn flip_transform_system(mut query: Query<(&SideScrollDirection, &mut Transform)>) {
-    for (direction, mut transform) in query.iter_mut() {
+//pub fn flip_transform_system(mut query: Query<(&SideScrollDirection, &mut Transform)>) {
+//    for (direction, mut transform) in query.iter_mut() {
+//        if direction.is_left() {
+//            transform.rotation = Quat::from_rotation_y(std::f32::consts::PI);
+//        } else {
+//            transform.rotation = Quat::from_rotation_y(0.0);
+//        }
+//    }
+//}
+
+pub fn flip_sprite_system(mut query: Query<(&SideScrollDirection, &mut Sprite)>) {
+    for (direction, mut sprite) in query.iter_mut() {
         if direction.is_left() {
-            transform.rotation = Quat::from_rotation_y(std::f32::consts::PI);
+            sprite.flip_x = true;
+            sprite.flip_y = false;
         } else {
-            transform.rotation = Quat::from_rotation_y(0.0);
+            sprite.flip_x = false;
+            sprite.flip_y = false;
         }
     }
 }
