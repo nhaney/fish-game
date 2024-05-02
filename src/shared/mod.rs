@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_prototype_lyon::prelude::*;
 
 pub mod animation;
 pub mod arena;
@@ -14,6 +15,9 @@ pub struct SharedPlugin;
 impl Plugin for SharedPlugin {
     fn build(&self, app: &mut App) {
         info!("Building shared plugin...");
+
+        // Add plugin to render shapes with bevy_prototype_lyon.
+        app.add_plugins(ShapePlugin);
 
         // Configure ordering of custom system sets.
         app.configure_sets(

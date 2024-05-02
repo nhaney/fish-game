@@ -3,12 +3,11 @@ use bevy::utils::Duration;
 use bevy_prototype_lyon::prelude::*;
 use std::collections::HashMap;
 
-use super::attributes::BoostSupply;
+use super::attributes::{BoostSupply, HungerCountdown, Player};
 use super::states::{PlayerState, PlayerStates};
 use crate::shared::{
     animation::{Animation, AnimationFrame, AnimationState},
     game::{GameOver, GameRestarted},
-    movement::Follow,
     render::RenderLayer,
 };
 
@@ -118,117 +117,114 @@ pub(super) fn player_state_animation_change_system(
       that represent the number of boosts available.
 */
 #[derive(Component)]
-pub(super) struct BoostTracker;
+pub(super) struct BoostTracker {
+    index: u8,
+}
+
+#[derive(Component)]
+pub(super) struct BoostTrackerBorder;
 
 pub(super) fn spawn_player_boost_trackers(
     commands: &mut Commands,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    mut meshes: ResMut<Assets<Mesh>>,
     player_width: f32,
     player_height: f32,
-    // TODO: Use this instead of hard coding 3 boosts
-    _max_boosts: u8,
+    max_boosts: u8,
     player_entity: Entity,
 ) {
-    // calculate the positions of each of the boost trackers relative to the player
-    // given the player's size and number of boosts
-    //let pink_color = materials.add(Color::PINK.into());
-    let pink_color = Color::PINK;
+    // let tracker_mesh = Mesh2dHandle(meshes.add(Circle { radius: 3.0 }));
+    let tracker_color = Color::PINK;
 
-    //let hot_pink_color = materials.add(Color::rgb_u8(255, 105, 180).into());
-    let hot_pink_color = Color::rgb_u8(255, 105, 180);
+    // let tracker_border_mesh = Mesh2dHandle(meshes.add(Circle { radius: 5.0 }));
+    let tracker_border_color = Color::rgb_u8(255, 105, 180);
 
     debug!("Adding boost trackers for player {:?}...", player_entity);
 
-    let extended_width = player_width;
+    // Trackers should extend 1.5 times the player's width
+    let extended_width = player_width * 1.5;
+    // Trackers should be 1 player height heigher than the player.
     let tracker_height = player_height;
 
-    // let mut tracker_positions: Vec<Vec3> = Vec::new();
+    let mut tracker_positions: Vec<Vec2> = Vec::new();
 
-    // for i in 0..max_boosts {
-    //     let x_offset = (i as f32 * (extended_width / max_boosts as f32)) - (extended_width / 2.0);
-    //     tracker_positions.push(Vec3::new(x_offset, tracker_height, 1.0));
-    // }
-    // TODO: Make this more generic to handle more
-    let tracker_positions = vec![
-        Vec3::new(-extended_width / 2.0, tracker_height, 0.0),
-        Vec3::new(0.0, tracker_height, 0.0),
-        Vec3::new(extended_width / 2.0, tracker_height, 0.0),
-    ];
+    for i in 0..max_boosts {
+        // Calculate the positions of each of the boost trackers relative to the player given the
+        // total number of boosts.
+        // Taken from https://bevyengine.org/examples/2D%20Rendering/2d-shapes/. I didn't come up
+        // with this math on my own lmao.
+        let x_offset = -extended_width / 2. + i as f32 / (max_boosts - 1) as f32 * extended_width;
+        tracker_positions.push(Vec2::new(x_offset, tracker_height));
+    }
 
     let mut boost_trackers: Vec<Entity> = Vec::new();
 
-    for tracker_position in tracker_positions {
-        // make the border and the tracker child components of the player
-        let tracker_shape = shapes::Circle {
-            radius: 4.0,
-            center: Vec2::ZERO,
-        };
-
-        let tracker_border_shape = shapes::Circle {
+    for (i, tracker_position) in tracker_positions.into_iter().enumerate() {
+        let tracker_border_shape = GeometryBuilder::build_as(&shapes::Circle {
             radius: 5.0,
             center: Vec2::ZERO,
-        };
+        });
 
-        let tracker = commands
+        let tracker_border_entity = commands
             .spawn((
                 ShapeBundle {
-                    path: GeometryBuilder::build_as(&tracker_shape),
+                    path: tracker_border_shape,
+                    spatial: SpatialBundle {
+                        transform: Transform::from_xyz(tracker_position.x, tracker_position.y, 5.0),
+                        ..default()
+                    },
                     ..default()
                 },
-                Fill::color(pink_color.clone()),
-                BoostTracker,
-                RenderLayer::Player,
-                Follow {
-                    entity_to_follow: player_entity,
-                    offset: tracker_position,
-                    follow_global_transform: false,
-                },
-            ))
-            .id();
-
-        let tracker_border = commands
-            .spawn((
-                ShapeBundle {
-                    path: GeometryBuilder::build_as(&tracker_border_shape),
-                    ..default()
-                },
-                Stroke::new(hot_pink_color.clone(), 2.0),
+                Stroke::color(tracker_border_color),
+                BoostTrackerBorder,
                 RenderLayer::Player,
             ))
             .id();
 
-        commands.entity(tracker).push_children(&[tracker_border]);
-        boost_trackers.push(tracker);
+        let tracker_shape = GeometryBuilder::build_as(&shapes::Circle {
+            radius: 4.0,
+            center: Vec2::ZERO,
+        });
+
+        let tracker_entity = commands
+            .spawn((
+                ShapeBundle {
+                    path: tracker_shape,
+                    spatial: SpatialBundle {
+                        transform: Transform::from_xyz(tracker_position.x, tracker_position.y, 5.0),
+                        ..default()
+                    },
+                    ..default()
+                },
+                Fill::color(tracker_color),
+                BoostTracker { index: i as u8 },
+                RenderLayer::Player,
+            ))
+            .id();
+
+        boost_trackers.extend_from_slice(&[tracker_border_entity, tracker_entity]);
     }
 
-    debug!("Added boost tracker entities: {:?}", boost_trackers);
+    commands
+        .entity(player_entity)
+        .push_children(boost_trackers.as_slice());
 
-    commands.entity(player_entity).insert(BoostTrackerDisplay {
-        trackers: boost_trackers,
-    });
+    debug!(
+        "Added boost tracker entities that follow player: {:?}",
+        boost_trackers
+    );
 }
 
-#[derive(Debug, Component)]
-pub(super) struct BoostTrackerDisplay {
-    trackers: Vec<Entity>,
-}
-
-// TODO: Update to also handle changes to max boosts here, make this use "changed" instead of updating every
-// frame
 pub(super) fn update_tracker_display_from_boost_supply(
-    player_query: Query<(&BoostSupply, &BoostTrackerDisplay)>,
-    mut tracker_query: Query<&mut Visibility, With<BoostTracker>>,
+    player_query: Query<&BoostSupply, With<Player>>,
+    mut tracker_query: Query<(&mut Visibility, &BoostTracker)>,
 ) {
-    for (boost_supply, boost_tracker_display) in player_query.iter() {
-        for i in 0..boost_supply.max_boosts {
-            let tracker_entity = boost_tracker_display.trackers[i as usize];
-            let mut tracker_visibility = tracker_query.get_mut(tracker_entity).unwrap();
+    for boost_supply in player_query.iter() {
+        let boosts_left = boost_supply.count;
 
-            if (i + 1) <= boost_supply.count {
-                *tracker_visibility = Visibility::Hidden;
+        for (mut tracker_vis, tracker) in tracker_query.iter_mut() {
+            if boosts_left > tracker.index {
+                *tracker_vis = Visibility::Visible;
             } else {
-                *tracker_visibility = Visibility::Visible;
+                *tracker_vis = Visibility::Hidden;
             }
         }
     }
@@ -238,18 +234,11 @@ pub(super) fn despawn_trackers_on_gameover_or_restart(
     mut commands: Commands,
     mut game_over_reader: EventReader<GameOver>,
     mut game_restarted_reader: EventReader<GameRestarted>,
-    boost_tracker_query: Query<Entity, With<BoostTracker>>,
-    player_query: Query<Entity, With<BoostTrackerDisplay>>,
+    boost_tracker_query: Query<Entity, Or<(With<BoostTracker>, With<BoostTrackerBorder>)>>,
 ) {
     if game_over_reader.read().next().is_some() {
         for boost_tracker in boost_tracker_query.iter() {
             commands.entity(boost_tracker).despawn_recursive();
-        }
-
-        for player_entity in player_query.iter() {
-            commands
-                .entity(player_entity)
-                .remove::<BoostTrackerDisplay>();
         }
     }
 
@@ -257,11 +246,67 @@ pub(super) fn despawn_trackers_on_gameover_or_restart(
         for boost_tracker in boost_tracker_query.iter() {
             commands.entity(boost_tracker).despawn_recursive();
         }
+    }
+}
 
-        for player_entity in player_query.iter() {
-            commands
-                .entity(player_entity)
-                .remove::<BoostTrackerDisplay>();
+#[derive(Component)]
+pub(super) struct PlayerCountdownText;
+
+pub(super) fn add_countdown_text(mut commands: Commands, player_entity: Entity) {
+    commands.entity(player_entity).with_children(|builder| {
+        builder.spawn((
+            Text2dBundle {
+                transform: Transform::from_xyz(0., 40., 1.),
+                text: Text::from_section(
+                    "30.0".to_string(),
+                    TextStyle {
+                        // TODO: Change from default font
+                        font_size: 30.0,
+                        ..Default::default()
+                    },
+                )
+                .with_justify(JustifyText::Center),
+                ..default()
+            },
+            PlayerCountdownText,
+        ));
+    });
+}
+
+pub(super) fn update_coundown_text_system(
+    mut text_query: Query<&mut Text, With<PlayerCountdownText>>,
+    player_query: Query<&HungerCountdown, With<Player>>,
+) {
+    for mut text in text_query.iter_mut() {
+        for hunger_countdown in player_query.iter() {
+            text.sections[0].value = format!("{:.1}", hunger_countdown.time_left);
+            if hunger_countdown.time_left < 5.0 {
+                text.sections[0].style.color = Color::RED;
+            } else {
+                text.sections[0].style.color = Color::PINK;
+            }
+        }
+    }
+}
+
+pub(super) fn hide_countdown_on_game_over(
+    mut game_over_reader: EventReader<GameOver>,
+    mut countdown_text_query: Query<&mut Visibility, With<PlayerCountdownText>>,
+) {
+    if game_over_reader.read().next().is_some() {
+        for mut countdown_text_visiblity in countdown_text_query.iter_mut() {
+            *countdown_text_visiblity = Visibility::Hidden;
+        }
+    }
+}
+
+pub(super) fn show_countdown_on_restart(
+    mut restart_reader: EventReader<GameRestarted>,
+    mut countdown_text_query: Query<&mut Visibility, With<PlayerCountdownText>>,
+) {
+    if restart_reader.read().next().is_some() {
+        for mut countdown_text_visiblity in countdown_text_query.iter_mut() {
+            *countdown_text_visiblity = Visibility::Visible;
         }
     }
 }

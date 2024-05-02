@@ -4,7 +4,7 @@ use crate::shared::{
     game::GameRestarted,
     movement::{SideScrollDirection, Velocity},
     render::RenderLayer,
-    stages::{self, AdjustPositionsSet},
+    stages::{self},
 };
 use bevy::prelude::*;
 use std::collections::HashSet;
@@ -50,6 +50,8 @@ impl Plugin for PlayerPlugin {
                     states::swim_movement_system,
                     reset_player,
                     render::despawn_trackers_on_gameover_or_restart,
+                    render::show_countdown_on_restart,
+                    render::hide_countdown_on_game_over,
                 )
                     .in_set(stages::HandleEventsSet),
             )
@@ -81,6 +83,7 @@ impl Plugin for PlayerPlugin {
                 (
                     render::player_state_animation_change_system,
                     render::update_tracker_display_from_boost_supply,
+                    render::update_coundown_text_system,
                 )
                     .in_set(stages::PrepareRenderSet),
             );
@@ -93,27 +96,24 @@ const PLAYER_MAX_BOOSTS: u8 = 3;
 
 fn init_player(
     mut commands: Commands,
-    materials: ResMut<Assets<ColorMaterial>>,
-    meshes: ResMut<Assets<Mesh>>,
     player_state_animations: Res<render::PlayerStateAnimations>,
 ) {
     let player_entity = spawn_player_entity(&mut commands, &player_state_animations);
+
+    // TODO: Break this out into separate systems.
     render::spawn_player_boost_trackers(
         &mut commands,
-        materials,
-        meshes,
         PLAYER_WIDTH,
         PLAYER_HEIGHT,
         PLAYER_MAX_BOOSTS,
         player_entity,
     );
+    render::add_countdown_text(commands, player_entity)
 }
 
 // TODO: Make this support more than one player
 fn reset_player(
     mut commands: Commands,
-    materials: ResMut<Assets<ColorMaterial>>,
-    meshes: ResMut<Assets<Mesh>>,
     player_state_animations: Res<render::PlayerStateAnimations>,
     mut restart_reader: EventReader<GameRestarted>,
     player_query: Query<Entity, With<attributes::Player>>,
@@ -128,8 +128,6 @@ fn reset_player(
         let new_player = spawn_player_entity(&mut commands, &player_state_animations);
         render::spawn_player_boost_trackers(
             &mut commands,
-            materials,
-            meshes,
             PLAYER_WIDTH,
             PLAYER_HEIGHT,
             PLAYER_MAX_BOOSTS,
