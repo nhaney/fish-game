@@ -166,7 +166,7 @@ fn spawn_player_entity(
             },
             attributes::BoostSupply {
                 max_boosts: PLAYER_MAX_BOOSTS,
-                count: 3,
+                count: PLAYER_MAX_BOOSTS,
             },
             states::PlayerState {
                 current_state: states::PlayerStates::Idle,

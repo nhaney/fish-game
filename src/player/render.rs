@@ -131,10 +131,7 @@ pub(super) fn spawn_player_boost_trackers(
     max_boosts: u8,
     player_entity: Entity,
 ) {
-    // let tracker_mesh = Mesh2dHandle(meshes.add(Circle { radius: 3.0 }));
     let tracker_color = Color::PINK;
-
-    // let tracker_border_mesh = Mesh2dHandle(meshes.add(Circle { radius: 5.0 }));
     let tracker_border_color = Color::rgb_u8(255, 105, 180);
 
     debug!("Adding boost trackers for player {:?}...", player_entity);
@@ -159,6 +156,7 @@ pub(super) fn spawn_player_boost_trackers(
 
     for (i, tracker_position) in tracker_positions.into_iter().enumerate() {
         let tracker_border_shape = GeometryBuilder::build_as(&shapes::Circle {
+            // TODO: Calculate radius and padding from max number of boosts.
             radius: 5.0,
             center: Vec2::ZERO,
         });
@@ -168,14 +166,13 @@ pub(super) fn spawn_player_boost_trackers(
                 ShapeBundle {
                     path: tracker_border_shape,
                     spatial: SpatialBundle {
-                        transform: Transform::from_xyz(tracker_position.x, tracker_position.y, 5.0),
+                        transform: Transform::from_xyz(tracker_position.x, tracker_position.y, 1.0),
                         ..default()
                     },
                     ..default()
                 },
                 Stroke::color(tracker_border_color),
                 BoostTrackerBorder,
-                RenderLayer::Player,
             ))
             .id();
 
@@ -189,14 +186,13 @@ pub(super) fn spawn_player_boost_trackers(
                 ShapeBundle {
                     path: tracker_shape,
                     spatial: SpatialBundle {
-                        transform: Transform::from_xyz(tracker_position.x, tracker_position.y, 5.0),
+                        transform: Transform::from_xyz(tracker_position.x, tracker_position.y, 1.0),
                         ..default()
                     },
                     ..default()
                 },
                 Fill::color(tracker_color),
                 BoostTracker { index: i as u8 },
-                RenderLayer::Player,
             ))
             .id();
 
@@ -256,7 +252,7 @@ pub(super) fn add_countdown_text(mut commands: Commands, player_entity: Entity) 
     commands.entity(player_entity).with_children(|builder| {
         builder.spawn((
             Text2dBundle {
-                transform: Transform::from_xyz(0., 40., 1.),
+                transform: Transform::from_xyz(0., 50., 1.),
                 text: Text::from_section(
                     "30.0".to_string(),
                     TextStyle {
