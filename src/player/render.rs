@@ -261,6 +261,7 @@ pub(super) fn add_countdown_text(mut commands: Commands, player_entity: Entity) 
                     },
                 )
                 .with_justify(JustifyText::Center),
+                visibility: Visibility::Visible,
                 ..default()
             },
             PlayerCountdownText,
@@ -290,6 +291,7 @@ pub(super) fn hide_countdown_on_game_over(
 ) {
     if game_over_reader.read().next().is_some() {
         for mut countdown_text_visiblity in countdown_text_query.iter_mut() {
+            debug!("Hiding countdown text on game over...");
             *countdown_text_visiblity = Visibility::Hidden;
         }
     }
@@ -300,7 +302,9 @@ pub(super) fn show_countdown_on_restart(
     mut countdown_text_query: Query<&mut Visibility, With<PlayerCountdownText>>,
 ) {
     if restart_reader.read().next().is_some() {
+        debug!("Resetting countdown text on restart...");
         for mut countdown_text_visiblity in countdown_text_query.iter_mut() {
+            debug!("Resetting countdown text on restart...");
             *countdown_text_visiblity = Visibility::Visible;
         }
     }

@@ -133,6 +133,7 @@ fn reset_player(
             PLAYER_MAX_BOOSTS,
             new_player,
         );
+        render::add_countdown_text(commands, new_player);
     }
 }
 
