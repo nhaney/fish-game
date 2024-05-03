@@ -102,8 +102,7 @@ impl Plugin for SharedPlugin {
         // Systems that finalize transform positions per frame
         .add_systems(
             Update,
-            (movement::movement_system, movement::flip_sprite_system)
-                .in_set(stages::FinalizeMovementSet),
+            (movement::movement_system,).in_set(stages::FinalizeMovementSet),
         )
         // Collision detection for destinations
         .add_systems(
@@ -125,6 +124,7 @@ impl Plugin for SharedPlugin {
                 game::reset_score_on_restart,
                 game::pause_game,
                 game::unpause_game,
+                movement::flip_sprite_system,
             )
                 .in_set(stages::PrepareRenderSet),
         );

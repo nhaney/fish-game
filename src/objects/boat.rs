@@ -11,7 +11,7 @@ use crate::shared::{
     arena::Arena,
     collision::Collider,
     game::{Difficulty, GameOver, GameRestarted, GameState},
-    movement::{Destination, Follow, SideScrollDirection, Velocity},
+    movement::{Destination, Follow, Velocity},
     render::RenderLayer,
     rng::GameRng,
 };
@@ -34,7 +34,6 @@ struct BoatStats {
     width: f32,
     height: f32,
     worm_chance: f32,
-    boat_type: BoatTypes,
 }
 
 #[derive(Debug, Resource)]
@@ -86,7 +85,6 @@ fn boat_stats_factory(difficulty: u8, rng: &mut ChaCha8Rng) -> BoatStats {
             width: 45.0,
             height: 10.0,
             worm_chance: 0.5,
-            boat_type,
         },
         BoatTypes::Fishingboat => BoatStats {
             num_poles: rng.gen_range(1..3) + difficulty,
@@ -94,7 +92,6 @@ fn boat_stats_factory(difficulty: u8, rng: &mut ChaCha8Rng) -> BoatStats {
             width: 65.0,
             height: 24.0,
             worm_chance: 0.8,
-            boat_type,
         },
         BoatTypes::Speedboat => BoatStats {
             num_poles: rng.gen_range(1..2) + difficulty,
@@ -102,7 +99,6 @@ fn boat_stats_factory(difficulty: u8, rng: &mut ChaCha8Rng) -> BoatStats {
             width: 75.0,
             height: 16.0,
             worm_chance: 0.4,
-            boat_type,
         },
         BoatTypes::Yacht => BoatStats {
             num_poles: rng.gen_range(3..6) + difficulty,
@@ -110,7 +106,6 @@ fn boat_stats_factory(difficulty: u8, rng: &mut ChaCha8Rng) -> BoatStats {
             width: 128.0,
             height: 64.0,
             worm_chance: 0.25,
-            boat_type,
         },
     }
 }

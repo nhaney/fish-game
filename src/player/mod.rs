@@ -75,7 +75,7 @@ impl Plugin for PlayerPlugin {
                     collision::player_worm_collision_system,
                     collision::player_boat_collision_system,
                 )
-                    .in_set(stages::AdjustPositionsSet),
+                    .in_set(stages::CalculateCollisionsSet),
             )
             // systems that handle final events and presentation
             .add_systems(

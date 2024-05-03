@@ -14,10 +14,6 @@ impl Plugin for ObjectPlugins {
         .init_resource::<boat::BoatMaterials>()
         .add_systems(
             Update,
-            (boat::boat_exit_system, boat::boat_spawner_system).in_set(stages::EmitEventsSet),
-        )
-        .add_systems(
-            Update,
             (
                 boat::player_bonked_handler,
                 boat::player_hooked_handler,
@@ -29,7 +25,8 @@ impl Plugin for ObjectPlugins {
         )
         .add_systems(
             Update,
-            (boat::despawn_boat_system,).in_set(stages::CalculateCollisionsSet),
+            (boat::despawn_boat_system, boat::boat_spawner_system)
+                .after(stages::CalculateCollisionsSet),
         )
         .add_systems(
             Update,
