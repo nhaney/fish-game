@@ -9,32 +9,33 @@
 Goals:
     * I want the codebase to be in a similar state in terms of organization and functionality, just working properly with the new version.
     * Get rid of all warnings
-    * Things that are not idiomatic bevy should be changed if they are not a part of the bigger refactoring later.
+    * Small improvements are okay, but major refactoring will come later.
 
-* [ ] UI refactoring
+* [x] UI refactoring
     * [x] Make entire UI be one tree under a root node and arranged with flexbox + component tags.
         * [x] Score works
         * [x] Leaderboard UI works
         * [x] Make pause button work
         * [x] Gameover text works
     * [x] Move countdown text from being a part of UI to being a TextBundle2d above the player
-        * [ ] Make countdown text not flip when player flips
-* [ ] Use bevy primitives introduced in 0.13 instead of bevy_prototype_lyon for
-    * [ ] lines (Line2d?, Rect + rope texture?)
-    * [ ] trackers (Circle)
-* [ ] Fix collisions
-    * [ ] Debug collider drawing
-        * [ ] Gizmos?
-    * [ ] Fix boat collision
-    * [ ] Fix hook collision
-    * [ ] Fix worm collision
+        * [x] Make countdown text not flip when player flips
+* [x] Fix collisions
+    * [x] Debug collider drawing
+        * [x] Gizmos?
+    * [x] Fix boat collision
+    * [x] Fix hook collision
+    * [x] Fix worm collision
+* [ ] Get WASM build working
+    * [ ] Get nix build working for native and web
+        * [ ] Remove bevy dylib feature from cargo.toml in prod build???
+        * [ ] Optimize web build based on guidelines here: https://github.com/bevyengine/bevy/tree/main/examples#webgl2-and-webgpu
+    * [ ] Build example command (this worked with my site besides from audio): `~/.cargo/bin/wasm-bindgen  --out-name fish-game --out-dir wasm-test/ --target web target/wasm32-unknown-unknown/debug/fish-game.wasm`
 
 ## Deterministic game refactoring
 
 Goals:
     * I want to completely separate out the game logic from the presentation logic and put it in another crate.
-    * I want to expose a bevy plugin to run the game.
-    * I want to use the bevy plugin to run the game on a fixed timestep.
+    * I want to expose a bevy plugin to run the game on a fixed timestep.
     * I want the game to be a pure function that takes an input and returns the entire game state as an output.
 
 ### Input/Output draft
@@ -62,3 +63,6 @@ struct FishGameState {
 let fish_game = FishGameState::new(config: FishGameConfig);
 let next_state = fish_game.tick(input: FishGameInput);
 ```
+
+
+

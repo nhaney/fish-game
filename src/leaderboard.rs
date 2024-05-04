@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-//#[cfg(feature = "native")]
+#[cfg(not(target_arch = "wasm32"))]
 use std::{
     fs::OpenOptions,
     io::{Read, Write},
@@ -22,7 +22,7 @@ pub struct LocalScores {
 }
 
 impl LocalScores {
-    //#[cfg(feature = "native")]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new(key: &str) -> Self {
         let filename = key.to_owned() + ".json";
         debug!("Filename: {:?}", filename);
@@ -80,7 +80,7 @@ impl LocalScores {
         }
     }
 
-    //#[cfg(feature = "native")]
+    #[cfg(not(target_arch = "wasm32"))]
     fn save_scores(&mut self) {
         let mut file = OpenOptions::new()
             .create(true)

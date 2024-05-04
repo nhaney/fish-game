@@ -38,7 +38,6 @@ fn main() {
                 debug: true,
                 ..default()
             },
-            //FrameTimeDiagnosticsPlugin,
             shared::SharedPlugin,
             leaderboard::LeaderboardPlugin,
             player::PlayerPlugin,
@@ -47,7 +46,4 @@ fn main() {
             audio::AudioPlugin,
         ))
         .run();
-
-    #[cfg(target_arch = "wasm32")]
-    app.add_plugin(bevy_webgl2::WebGL2Plugin);
 }

@@ -4,3 +4,7 @@ rustflags = ["-C", "link-arg=-fuse-ld=mold"]
 
 [build]
 incremental = true
+
+[target.wasm32-unknown-unknown]
+runner = "wasm-server-runner"
+
