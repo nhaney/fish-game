@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::leaderboard::{LocalScores, ScoreSaved};
 use crate::shared::game::GameRestarted;
-use crate::ui::common::FontHandles;
+use crate::shared::render::FontHandles;
 
 #[derive(Resource)]
 pub(super) struct HighScoreDisplayConfig {

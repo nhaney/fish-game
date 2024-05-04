@@ -1,4 +1,4 @@
-use bevy::{prelude::*, sprite};
+use bevy::prelude::*;
 
 use super::game::{GameState, GameStates};
 

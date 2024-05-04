@@ -3,8 +3,8 @@ use crate::shared::{
     collision::Collider,
     game::GameRestarted,
     movement::{SideScrollDirection, Velocity},
-    render::RenderLayer,
-    stages::{self},
+    render::{FontHandles, RenderLayer},
+    stages,
 };
 use bevy::prelude::*;
 use std::collections::HashSet;
@@ -96,6 +96,7 @@ const PLAYER_MAX_BOOSTS: u8 = 3;
 
 fn init_player(
     mut commands: Commands,
+    fonts: Res<FontHandles>,
     player_state_animations: Res<render::PlayerStateAnimations>,
 ) {
     let player_entity = spawn_player_entity(&mut commands, &player_state_animations);
@@ -108,12 +109,13 @@ fn init_player(
         PLAYER_MAX_BOOSTS,
         player_entity,
     );
-    render::add_countdown_text(commands, player_entity)
+    render::add_countdown_text(commands, fonts, player_entity)
 }
 
 // TODO: Make this support more than one player
 fn reset_player(
     mut commands: Commands,
+    fonts: Res<FontHandles>,
     player_state_animations: Res<render::PlayerStateAnimations>,
     mut restart_reader: EventReader<GameRestarted>,
     player_query: Query<Entity, With<attributes::Player>>,
@@ -133,7 +135,7 @@ fn reset_player(
             PLAYER_MAX_BOOSTS,
             new_player,
         );
-        render::add_countdown_text(commands, new_player);
+        render::add_countdown_text(commands, fonts, new_player);
     }
 }
 

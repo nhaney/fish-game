@@ -1,8 +1,7 @@
 use bevy::{
-    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    diagnostic::LogDiagnosticsPlugin,
     prelude::*,
     window::{PresentMode, WindowMode},
-    winit::winit_window_position,
 };
 //// test test test more testing! edit with vim...WTF!!!
 mod audio;
@@ -34,7 +33,8 @@ fn main() {
                 .set(bevy::log::LogPlugin {
                     level: bevy::log::Level::DEBUG,
                     ..default()
-                }),
+                })
+                .set(ImagePlugin::default_nearest()),
             LogDiagnosticsPlugin {
                 debug: true,
                 ..default()
@@ -48,23 +48,6 @@ fn main() {
             audio::AudioPlugin,
         ))
         .run();
-    /*
-    .add_resource(WindowDescriptor {
-        title: "Stay Off the Line!".to_string(),
-        width: 1280.0,
-        height: 720.0,
-        #[cfg(target_arch = "wasm32")]
-        canvas: Some("#fish-game".to_string()),
-        vsync: false,
-        resizable: true,
-        mode: WindowMode::Windowed,
-        ..Default::default()
-    })
-    .add_resource(bevy::log::LogSettings {
-        level: bevy::log::Level::DEBUG,
-        filter: "wgpu=error,bevy_webgl2=warn,bevy_ecs=info".to_string(),
-    })
-    .add_plugins(DefaultPlugins);*/
 
     #[cfg(target_arch = "wasm32")]
     app.add_plugin(bevy_webgl2::WebGL2Plugin);

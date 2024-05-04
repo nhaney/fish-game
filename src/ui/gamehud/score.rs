@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::leaderboard::LocalScores;
 use crate::shared::game::{GameOver, GameRestarted, Score};
-use crate::ui::common::FontHandles;
+use crate::shared::render::FontHandles;
 
 #[derive(Component)]
 pub(super) struct ScoreText;

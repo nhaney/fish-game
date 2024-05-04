@@ -3,6 +3,21 @@ use bevy::{prelude::*, window::WindowResized};
 use super::arena::Arena;
 use super::MainCamera;
 
+#[derive(Debug, Clone, Resource)]
+pub(crate) struct FontHandles {
+    pub main_font: Handle<Font>,
+}
+
+impl FromWorld for FontHandles {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.get_resource::<AssetServer>().unwrap();
+        debug!("Loading fonts...");
+        Self {
+            main_font: asset_server.load("fonts/Chonkly.ttf"),
+        }
+    }
+}
+
 pub(super) fn scale_camera_to_screen_size(
     arena: Res<Arena>,
     mut resize_event_reader: EventReader<WindowResized>,

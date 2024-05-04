@@ -8,6 +8,7 @@ use super::states::{PlayerState, PlayerStates};
 use crate::shared::{
     animation::{Animation, AnimationFrame, AnimationState},
     game::{GameOver, GameRestarted},
+    render::FontHandles,
 };
 
 #[derive(Resource)]
@@ -18,7 +19,6 @@ pub(super) struct PlayerStateAnimations {
 impl FromWorld for PlayerStateAnimations {
     fn from_world(world: &mut World) -> Self {
         let asset_server = world.get_resource::<AssetServer>().unwrap();
-        // let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
 
         let swim_1_handle = asset_server.load("sprites/player/fish1.png");
         let swim_2_handle = asset_server.load("sprites/player/fish2.png");
@@ -247,16 +247,24 @@ pub(super) fn despawn_trackers_on_gameover_or_restart(
 #[derive(Component)]
 pub(super) struct PlayerCountdownText;
 
-pub(super) fn add_countdown_text(mut commands: Commands, player_entity: Entity) {
+pub(super) fn add_countdown_text(
+    mut commands: Commands,
+    fonts: Res<FontHandles>,
+    player_entity: Entity,
+) {
     commands.entity(player_entity).with_children(|builder| {
         builder.spawn((
             Text2dBundle {
-                transform: Transform::from_xyz(0., 50., 1.),
+                transform: Transform {
+                    translation: Vec3::new(0., 50., 1.),
+                    scale: Vec3::ONE * 0.25,
+                    ..default()
+                },
                 text: Text::from_section(
                     "30.0".to_string(),
                     TextStyle {
-                        // TODO: Change from default font
-                        font_size: 30.0,
+                        font: fonts.main_font.clone(),
+                        font_size: 70.0,
                         ..Default::default()
                     },
                 )

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::player::events::{PlayerBonked, PlayerHooked, PlayerStarved};
 use crate::shared::game::GameRestarted;
-use crate::ui::common::FontHandles;
+use crate::shared::render::FontHandles;
 
 #[derive(Component)]
 pub(super) struct GameOverMessageRootNode;

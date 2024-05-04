@@ -7,10 +7,6 @@ pub struct Collider {
 }
 
 impl Collider {
-    pub fn as_vec2(&self) -> Vec2 {
-        Vec2::new(self.width, self.height)
-    }
-
     pub fn as_vec2_half_size(&self) -> Vec2 {
         Vec2::new(self.width / 2., self.height / 2.)
     }

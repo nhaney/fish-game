@@ -19,6 +19,8 @@ impl Plugin for SharedPlugin {
         // Add plugin to render shapes with bevy_prototype_lyon.
         app.add_plugins(ShapePlugin);
 
+        app.init_resource::<render::FontHandles>();
+
         // Configure ordering of custom system sets.
         app.configure_sets(
             Update,

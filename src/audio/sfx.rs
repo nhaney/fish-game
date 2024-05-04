@@ -32,7 +32,6 @@ pub(super) fn play_sfx_system(
     mut player_bonked_reader: EventReader<PlayerBonked>,
     mut player_ate_reader: EventReader<PlayerAte>,
     mut player_boosted_reader: EventReader<PlayerBoosted>,
-    player_boosted_events: Res<Events<PlayerBoosted>>,
     sfx_handles: Res<SfxHandles>,
     mut commands: Commands,
 ) {
@@ -68,7 +67,7 @@ pub(super) fn play_sfx_system(
         });
     }
 
-    for event in player_boosted_reader.read() {
+    for _ in player_boosted_reader.read() {
         debug!("Playing boosted sound effect");
         commands.spawn(AudioBundle {
             source: sfx_handles.boost.clone(),

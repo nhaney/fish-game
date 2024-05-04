@@ -53,9 +53,9 @@ pub(super) fn animation_system(
 
     for (mut animation_state, mut material_handle) in query.iter_mut() {
         let speed_multiplier = animation_state.speed_multiplier;
-        animation_state
-            .timer
-            .tick(time.delta() * speed_multiplier as u32);
+        animation_state.timer.tick(Duration::from_secs_f32(
+            time.delta().as_secs_f32() * speed_multiplier,
+        ));
 
         if animation_state.timer.finished() {
             let cur_animation = &animation_state.animation;

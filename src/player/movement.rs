@@ -14,8 +14,8 @@ the target speed of the player.
 pub(super) fn move_player_from_input(
     keyboard_input: &ButtonInput<KeyCode>,
     player: &Player,
-    mut velocity: &mut Velocity,
-    mut facing: &mut SideScrollDirection,
+    velocity: &mut Velocity,
+    facing: &mut SideScrollDirection,
 ) -> Vec3 {
     let mut target_speed = Vec3::ZERO;
 
