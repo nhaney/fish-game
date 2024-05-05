@@ -1,12 +1,12 @@
 /target
 /dist
 
-scores.json
 .doit.db
 __pycache__
 .vim
 *.zip
 
 .direnv/
+/result
 
 scores.json
