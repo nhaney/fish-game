@@ -24,7 +24,7 @@
                 devShells.default = pkgs.mkShellNoCC rec {
                     packages = with pkgs; [
                         (rust-bin.beta.latest.default.override {
-                            extensions = [ "wasm-bindgen-cli" ];
+                            extensions = [ ];
                             targets = ["wasm32-unknown-unknown"];
                         })
 

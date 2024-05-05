@@ -26,7 +26,8 @@ Goals:
     * [x] Fix hook collision
     * [x] Fix worm collision
 * [ ] Get WASM build working
-    * [ ] Get nix build working for native and web
+    * [ ] Get nix build working for native linux (default package)
+    * [ ] Get nix build working for wasm
         * [ ] Remove bevy dylib feature from cargo.toml in prod build???
         * [ ] Optimize web build based on guidelines here: https://github.com/bevyengine/bevy/tree/main/examples#webgl2-and-webgpu
     * [ ] Build example command (this worked with my site besides from audio): `~/.cargo/bin/wasm-bindgen  --out-name fish-game --out-dir wasm-test/ --target web target/wasm32-unknown-unknown/debug/fish-game.wasm`
@@ -63,6 +64,4 @@ struct FishGameState {
 let fish_game = FishGameState::new(config: FishGameConfig);
 let next_state = fish_game.tick(input: FishGameInput);
 ```
-
-
 
