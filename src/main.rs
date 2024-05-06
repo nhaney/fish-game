@@ -1,4 +1,5 @@
 use bevy::{
+    asset::AssetMetaCheck,
     diagnostic::LogDiagnosticsPlugin,
     prelude::*,
     window::{PresentMode, WindowMode},
@@ -13,6 +14,7 @@ mod ui;
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::rgb_u8(230, 202, 173)))
+        .insert_resource(AssetMetaCheck::Never)
         .add_plugins((
             DefaultPlugins
                 .set(WindowPlugin {

@@ -8,6 +8,7 @@ resolver = "2"
 [features]
 
 [dependencies]
+# TODO: https://stackoverflow.com/questions/69428144/can-i-activate-a-dependencys-feature-only-for-debug-profile
 bevy = { version = "0.13.2" }#,features = ["dynamic_linking"] }
 bevy_prototype_lyon = "0.11"
 

@@ -70,22 +70,23 @@ in
         # Custom build phase that uses the wasm target.
         # TODO: See if we can do this without overriding.
         buildPhase = ''
-            cargo build --release --target wasm32-unknown-unknown
+            cargo build --profile wasm-release --target wasm32-unknown-unknown
 
             echo 'Creating out dir...'
-
             mkdir -p $out/bin
 
             echo 'Generating JS code to run the WASM...'
+            wasm-bindgen --no-typescript --out-dir $out/bin --target web target/wasm32-unknown-unknown/wasm-release/fish-game.wasm
 
-            wasm-bindgen --out-dir $out/bin --target web target/wasm32-unknown-unknown/release/fish-game.wasm
+            echo 'Optimizing WASM binary...'
+            wasm-opt -Oz --output optimized.wasm $out/bin/fish-game_bg.wasm
+            mv optimized.wasm $out/bin/fish-game_bg.wasm
+
+            echo 'Copying assets into output directory...'
+            cp -r assets $out/bin
         '';
 
         installPhase = "echo 'Skipping installPhase in web build.'";
         checkPhase = "echo 'Skipping checkPhase in web build.'";
-
-        postInstall = ''
-            cp -r assets $out/bin
-        '';
     };
 }
