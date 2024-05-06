@@ -19,7 +19,8 @@
             in
             {
                 packages = {
-                    default = pkgs.callPackage ./default.nix {};
+                    default = (pkgs.callPackage ./. {}).native;
+                    wasm = (pkgs.callPackage ./. {}).wasm;
                 };
                 devShells.default = pkgs.mkShellNoCC rec {
                     packages = with pkgs; [
@@ -34,6 +35,8 @@
                         xorg.libX11 xorg.libXcursor xorg.libXi xorg.libXrandr libxkbcommon
 
                         clang mold
+
+                        wasm-bindgen-cli binaryen
                     ];
 
                     LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath packages;
