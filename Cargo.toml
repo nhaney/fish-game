@@ -65,5 +65,6 @@ opt-level = 's'
 [profile.wasm-release]
 inherits = "release"
 opt-level = "z"
-lto = "fat"
+lto = true
 codegen-units = 1
+panic = 'abort'

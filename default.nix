@@ -58,18 +58,10 @@ in
         nativeBuildInputs = appWasmNativeBuildInputs;
         buildInputs = appBuildInputs;
 
-        # Remove dynamic linking feature from bevy build for distribution.
-        prePatch = ''
-            substituteInPlace ./Cargo.toml \
-                --replace-fail \
-                    "bevy = { version = \"0.13.2\", features = [\"dynamic_linking\"] }" \
-                    "bevy = \"0.13.2\""
-        '';
-
         # Custom build phase that uses the wasm target.
         # TODO: See if we can do this without overriding.
         buildPhase = ''
-            cargo build --features wasm --profile wasm-release --target wasm32-unknown-unknown
+            cargo build --no-default-features --features wasm --profile wasm-release --target wasm32-unknown-unknown
 
             echo 'Creating out dir...'
             mkdir -p $out/bin
