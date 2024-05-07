@@ -28,9 +28,9 @@ Goals:
 * [ ] Get WASM build working
     * [x] Get nix build working for native linux (default package)
     * [x] Get nix build working for wasm
-        * [ ] Remove bevy dylib feature from cargo.toml in prod build???
+        * [x] Remove bevy dylib feature from cargo.toml in prod build???
         * [x] Optimize web build based on guidelines here: https://github.com/bevyengine/bevy/tree/main/examples#webgl2-and-webgpu
-        * [ ] Remove unnecessary bevy features being used.
+        * [x] Remove unnecessary bevy features being used.
         * [ ] Get rid of logging on debug builds
         * [ ] Figure out why firefox is blocking audio
             * [ ] Press play to start?
