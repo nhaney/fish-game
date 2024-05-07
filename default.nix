@@ -39,11 +39,8 @@ in
         nativeBuildInputs = appNativeBuildInputs;
         buildInputs = appBuildInputs;
 
-        # TODO: Remove dynamic linking feature in build so that the game can be distributed as a single executable.
-        # patch = ''
-        #     substituteInPlace ./Cargo.toml 
-        #         --replace "bevy = { version = \"0.13.2\", features = [\"dynamic_linking\"] }" "bevy = \"0.13.2\""
-        # '';
+        buildNoDefaultFeatures = true;
+        buildFeatures = [ "linux" ];
 
         postInstall = ''
             cp -r assets $out/bin
@@ -61,16 +58,18 @@ in
         nativeBuildInputs = appWasmNativeBuildInputs;
         buildInputs = appBuildInputs;
 
-        # TODO: Remove dynamic linking feature in build so that the game can be distributed as a single executable.
-        # patch = ''
-        #     substituteInPlace ./Cargo.toml 
-        #         --replace "bevy = { version = \"0.13.2\", features = [\"dynamic_linking\"] }" "bevy = \"0.13.2\""
-        # '';
+        # Remove dynamic linking feature from bevy build for distribution.
+        prePatch = ''
+            substituteInPlace ./Cargo.toml \
+                --replace-fail \
+                    "bevy = { version = \"0.13.2\", features = [\"dynamic_linking\"] }" \
+                    "bevy = \"0.13.2\""
+        '';
 
         # Custom build phase that uses the wasm target.
         # TODO: See if we can do this without overriding.
         buildPhase = ''
-            cargo build --profile wasm-release --target wasm32-unknown-unknown
+            cargo build --features wasm --profile wasm-release --target wasm32-unknown-unknown
 
             echo 'Creating out dir...'
             mkdir -p $out/bin
@@ -87,6 +86,8 @@ in
         '';
 
         installPhase = "echo 'Skipping installPhase in web build.'";
-        checkPhase = "echo 'Skipping checkPhase in web build.'";
+
+        # Don't do checks on WASM build.
+        doCheck = false;
     };
 }
