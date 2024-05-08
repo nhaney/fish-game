@@ -31,10 +31,10 @@ Goals:
         * [x] Remove bevy dylib feature from cargo.toml in prod build???
         * [x] Optimize web build based on guidelines here: https://github.com/bevyengine/bevy/tree/main/examples#webgl2-and-webgpu
         * [x] Remove unnecessary bevy features being used.
-        * [ ] Get rid of logging on debug builds
+        * [x] Get rid of logging on debug builds
         * [ ] Figure out why firefox is blocking audio
             * [ ] Press play to start?
-        * [ ] Fix score text size + offset
+        * [x] Fix score text size + offset
 
 ## Deterministic game refactoring
 
