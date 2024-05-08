@@ -1,25 +1,7 @@
-# Runs nix build to build both the linux and WASM build of the game and uploads them to github artifacts.
-# TODO: Add in a windows build in the future using normal cargo.
+# Runs nix build to build both the WASM build of the game and uploads it to github artifacts.
+# TODO: Add in a linux build with statically linked nix and a windows build with normal cargo actions.
 on: [push]
 jobs:
-  build-and-publish-linux-build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Install Nix
-        uses: cachix/install-nix-action@v17
-        with:
-          # Mostly to avoid GitHub rate limiting
-          extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-      - name: Build game
-        run: nix build .
-      - name: Upload to github artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: stay-off-the-line-remastered-${{ runner.os }}-release-${{ github.sha }}
-          path: result/bin/
   build-and-publish-wasm-build:
     runs-on: ubuntu-latest
     steps:
@@ -38,3 +20,4 @@ jobs:
         with:
           name: stay-off-the-line-remastered-wasm-release-${{ github.sha }}
           path: result/bin/
+
