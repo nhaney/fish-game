@@ -22,7 +22,6 @@ pub fn setup_score_display(mut commands: Commands, fonts: Res<FontHandles>) {
             ),
             style: Style {
                 margin: UiRect {
-                    top: Val::Percent(5.0),
                     left: Val::Percent(5.0),
                     ..Default::default()
                 },

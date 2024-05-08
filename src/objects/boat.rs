@@ -259,7 +259,8 @@ fn spawn_lines(
         // the start point of the line, behind the rod angle point
         let line_start_point = Vec3::new(rod_angle_point.x - ROD_LENGTH, rod_angle_point.y, 0.0);
 
-        let line_length = rng.gen_range(100 + boat_stats.height as u32..325) as f32;
+        // TODO: Make this more dynamic based on the boat/arena.
+        let line_length = rng.gen_range(50 + boat_stats.height as u32..325) as f32;
         let line_angle = rng.gen_range(225..271) as f32;
 
         let line_end_point = Vec3::new(
