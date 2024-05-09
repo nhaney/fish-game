@@ -32,8 +32,8 @@ Goals:
         * [x] Optimize web build based on guidelines here: https://github.com/bevyengine/bevy/tree/main/examples#webgl2-and-webgpu
         * [x] Remove unnecessary bevy features being used.
         * [x] Get rid of logging on debug builds
-        * [ ] Figure out why firefox is blocking audio
-            * [ ] Press play to start?
+        * [x] Figure out why firefox is blocking audio
+            * [x] Press play to start?
         * [x] Fix score text size + offset
 
 ## Deterministic game refactoring
