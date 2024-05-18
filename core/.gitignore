@@ -1,0 +1,12 @@
+/target
+/dist
+
+.doit.db
+__pycache__
+.vim
+*.zip
+
+.direnv/
+/result
+
+scores.json

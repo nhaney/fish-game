@@ -40,7 +40,7 @@ Goals:
 
 Goals:
     * I want to completely separate out the game logic from the presentation logic and put it in another crate.
-    * I want to expose a bevy plugin to run the game on a fixed timestep.
+    * I want to expose a bevy plugin that contains everything needed to run the game.
     * I want the game to be a pure function that takes an input and returns the entire game state as an output.
 
 ### Input/Output draft
@@ -49,7 +49,7 @@ Initialization:
 ```rust
 /// Initialization configuration for the fish game.
 struct FishGameConfig {
-    pub tick_rate: u32;
+    pub random_seed: u32;
 }
 ```
 Input:
@@ -66,6 +66,38 @@ struct FishGameState {
 }
 
 let fish_game = FishGameState::new(config: FishGameConfig);
-let next_state = fish_game.tick(input: FishGameInput);
+let next_state = fish_game.update(input: FishGameInput);
 ```
+
+### Design options
+
+#### Use an entirely separate bevy world
+
+Pros:
+* Can still use bevy ECS and all of its flexibility
+* Don't have to create a custom game loop or anything
+* Easy to add new features and test
+
+Cons:
+* Won't be able to run it easily in other contexts (example: game boy port idea)
+* Might be going against the grain of bevy which could cause friction in implementation
+* Might be hard to make deterministic (unknown)
+* Won't be learning as much in terms of game engine development
+
+#### Create completely custom simulation
+
+Pros
+* Could make it operate exactly as I need it to
+* More portable
+
+Cons:
+* Would take longer to implement
+* Might not be as flexible as an ECS approach (or just a worse ECS approach)
+* Less performant most likely
+
+#### Conclusion
+
+Going to try with the bevy world idea, because I value iteration time. Going to create an MVP to make sure
+that it has the bare minimum requirements that I need for determinism.
+
 

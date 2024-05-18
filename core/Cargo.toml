@@ -1,0 +1,13 @@
+[package]
+name = "fish-game-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Nigel Haney <me@nigelhaney.com>"]
+resolver = "2"
+
+[dependencies]
+bevy = { version = "0.13.2", default-features = false }
+
+rand = "0.8.5"
+rand_chacha = "0.3.1"
+
