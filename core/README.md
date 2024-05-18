@@ -17,3 +17,14 @@ let input = FishGameInputState { inputs: [ FishGameInput.UpPressed, FishGameInpu
 // Updates the fish game based on the input and provides the current state after the update.
 let new_state = fish_game.update(input);
 ```
+
+## TODO
+
+* [ ] Setup cargo workspace between app and core library that can share dependencies and other stuff as well as allow both to be opened in the same project.
+* [ ] Extract player logic + arena from app and put it into core library.
+* [ ] Set up glue code between core library and app and allow for player movement.
+* [ ] Set up integration tests on core library that test for determinism.
+* [ ] Extract boat logic from app and put it into core library.
+* [ ] Extract collision detection logic and put it into core library
+* [ ] Allow for debug rendering of colliders with gizmos by optionally putting collider dimensions in state.
+* [ ] Add frame-by-frame execution for debugging
