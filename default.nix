@@ -74,7 +74,7 @@ in
             mv optimized.wasm $out/bin/fish-game_bg.wasm
 
             echo 'Copying assets into output directory...'
-            cp -r assets $out/bin
+            cp -r fish-game-app/assets $out/bin
         '';
 
         installPhase = "echo 'Skipping installPhase in web build.'";

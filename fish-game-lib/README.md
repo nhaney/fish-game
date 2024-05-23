@@ -20,7 +20,7 @@ let new_state = fish_game.update(input);
 
 ## TODO
 
-* [ ] Setup cargo workspace between app and core library that can share dependencies and other stuff as well as allow both to be opened in the same project.
+* [x] Setup cargo workspace between app and core library that can share dependencies and other stuff as well as allow both to be opened in the same project.
 * [ ] Extract player logic + arena from app and put it into core library.
 * [ ] Set up glue code between core library and app and allow for player movement.
 * [ ] Set up integration tests on core library that test for determinism.

@@ -1,0 +1,70 @@
+[package]
+name = "fish-game"
+version = "0.1.0"
+authors = ["Nigel Haney <me@nigelhaney.com>"]
+edition = "2021"
+resolver = "2"
+
+[features]
+# By default, include all features in the build to allow for compatibility with dev tools.
+# Release builds will always use a specific feature.
+default = ["common", "linux", "wasm", "dev"]
+
+common = [
+    "bevy/bevy_asset",
+    "bevy/bevy_audio",
+    "bevy/bevy_core_pipeline",
+    "bevy/bevy_render",
+    "bevy/bevy_sprite",
+    "bevy/bevy_text",
+    "bevy/bevy_ui",
+    "bevy/bevy_winit",
+    "bevy/png",
+    "bevy/vorbis",
+]
+
+desktop = [
+    "bevy/multi-threaded",
+]
+
+linux = [
+    "common", "desktop", "bevy/x11"
+]
+
+wasm = [
+    "common", "bevy/webgl2", "dep:web-sys", "dep:wasm-bindgen"
+]
+
+dev = [
+    "common", "linux", "bevy/dynamic_linking",
+]
+
+[dependencies]
+bevy = { version = "0.13.2", default-features = false }
+bevy_prototype_lyon = "0.11"
+
+rand = "0.8.5"
+rand_chacha = "0.3.1"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+web-sys = { version = "0.3.4", optional = true, features = [ 'Storage', 'Window'] }
+wasm-bindgen = { version = "0.2.92", optional = true }
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+lto = true
+opt-level = 's'
+
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = 'abort'
