@@ -3,6 +3,8 @@ use bevy::prelude::*;
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 
+mod arena;
+mod core2d;
 mod player;
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -96,6 +98,7 @@ fn create_bevy_app_for_simulation(_config: &FishGameConfig) -> App {
     app.init_resource::<FishGameState>()
         .init_resource::<GameRng>()
         .add_event::<FishGameInputEvent>()
+        .add_systems(Startup, arena::initialize_arena)
         .add_systems(Update, update_state_resource);
 
     app
