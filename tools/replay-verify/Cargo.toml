@@ -1,0 +1,8 @@
+[package]
+name = "replay-verify"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+fish-game-core = { workspace = true }

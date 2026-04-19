@@ -1,0 +1,21 @@
+[package]
+name = "fish-game-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Deterministic simulation core for Stay Off the Line! Remastered."
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[dependencies]
+# glam's libm feature routes vector math through libm so trig/sqrt/normalize are
+# bit-identical across targets. No `fast-math` in core — keep this off.
+glam = { workspace = true }
+# Pure-Rust trig/sqrt for anything we do by hand outside glam.
+libm = "0.2"
+rand = { workspace = true }
+rand_chacha = { workspace = true }
+serde = { workspace = true }
+bincode = { workspace = true }
+slotmap = { workspace = true }

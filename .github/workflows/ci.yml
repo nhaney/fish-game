@@ -1,5 +1,8 @@
-# Runs nix build to build both the WASM build of the game and uploads it to github artifacts.
-# TODO: Add in a linux build with statically linked nix and a windows build with normal cargo actions.
+# CI:
+#   - Builds + uploads the WASM build (as before).
+#   - Runs the deterministic-simulation test suite for `fish-game-core` and
+#     builds the `replay-verify` CLI. These gate the determinism invariants
+#     the replay/leaderboard story depends on.
 on: [push]
 jobs:
   build-and-publish-wasm-build:
@@ -20,4 +23,28 @@ jobs:
         with:
           name: stay-off-the-line-remastered-wasm-release-${{ github.sha }}
           path: result/bin/
+  core-determinism:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-core-${{ hashFiles('**/Cargo.lock') }}
+      - name: Test fish-game-core
+        run: cargo test -p fish-game-core --locked
+      - name: Build replay-verify
+        run: cargo build -p replay-verify --locked
+      - name: Verify fish-game-core has no bevy dependency
+        run: |
+          if cargo tree -p fish-game-core --prefix none --no-dedupe | grep -qi '^bevy'; then
+            echo "fish-game-core must not depend on bevy"; exit 1
+          fi
 
