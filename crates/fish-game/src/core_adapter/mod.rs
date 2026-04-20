@@ -3,12 +3,12 @@
 //! The core owns all simulation state. The adapter:
 //!
 //!   1. Builds a [`FishGameInput`] from current keyboard state each fixed tick.
-//!   2. Snapshots `CoreState.prev` before calling `tick`.
-//!   3. Diffs the post-tick state against the snapshot and emits the legacy
-//!      Bevy events (`PlayerHooked`, `PlayerAte`, `GameOver`, …). Existing
-//!      SFX/UI consumers stay as-is.
+//!   2. Calls `state.tick(input)`.
+//!   3. Forwards every [`CoreEvent`] in `state.events` to its Bevy equivalent
+//!      (`PlayerHooked`, `PlayerAte`, `GameOver`, …). No state diffing — the
+//!      core tells us exactly what happened.
 //!   4. Mirrors core entities (boats, hooks, worms) into Bevy entities via a
-//!      `CoreEntityMap`, spawning/despawning as slotmap membership changes.
+//!      `CoreEntityMap`, driven by `*Spawned`/`*Despawned` events.
 //!
 //! Lifecycle (pause / restart) lives here, NOT in core:
 //!   - Pause ⇒ `CoreControl.paused` flips; `tick_core_from_input` returns
@@ -19,7 +19,7 @@
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
 use fish_game_core::boat::{BoatId, HookId, LineId, WormId};
-use fish_game_core::{FishGameConfig, FishGameInput, FishGameState, GameOverCause, GamePhase};
+use fish_game_core::{CoreEvent, FishGameConfig, FishGameInput, FishGameState, GamePhase};
 use rand::{thread_rng, Rng};
 use std::collections::BTreeMap;
 
@@ -30,29 +30,26 @@ use crate::shared::collision::Collider;
 use crate::shared::game::{GameOver, GamePaused, GameRestarted, GameUnpaused};
 use crate::shared::render::RenderLayer;
 
-/// Resource wrapping the deterministic simulation. `state` is the source of
-/// truth; `prev` is the snapshot taken just before the current tick and used
-/// to derive events on the same frame.
+/// Resource wrapping the deterministic simulation — the single source of
+/// truth. Presentation reads `state` and forwards `state.events` after each
+/// tick; no prev-snapshot is needed because the core tells us exactly what
+/// transitioned.
 #[derive(Resource)]
 pub struct CoreState {
     pub state: FishGameState,
-    pub prev: FishGameState,
 }
 
 impl CoreState {
     pub fn new(config: FishGameConfig) -> Self {
-        let state = FishGameState::new(config);
-        let prev = state.clone();
-        Self { state, prev }
+        Self {
+            state: FishGameState::new(config),
+        }
     }
 
-    /// Replace the current sim with a fresh one (same tuning, new seed). The
-    /// previous-state snapshot is reset to match so diff-based event
-    /// emission doesn't fire spurious "started" transitions from leftover
-    /// state. Used by restart.
+    /// Replace the current sim with a fresh one (same tuning, new seed).
+    /// Used by restart.
     pub fn reset_with(&mut self, config: FishGameConfig) {
         self.state = FishGameState::new(config);
-        self.prev = self.state.clone();
     }
 }
 
@@ -118,7 +115,7 @@ impl Plugin for CorePlugin {
 
         app.add_systems(
             FixedUpdate,
-            (tick_core_from_input, diff_and_emit_events, sync_ecs_from_core).chain(),
+            (tick_core_from_input, forward_core_events, sync_ecs_from_core).chain(),
         );
     }
 }
@@ -168,20 +165,23 @@ fn tick_core_from_input(
     }
 
     if control.paused {
-        // While paused we still need `prev == state` so diffs don't fire
-        // stale events on unpause.
-        core.prev = core.state.clone();
+        // Drop any lingering events so presentation doesn't replay them on
+        // unpause.
+        core.state.events.clear();
         return;
     }
 
     let input = build_input(&keyboard);
-    core.prev = core.state.clone();
     core.state.tick(input);
 }
 
-fn diff_and_emit_events(
+/// Forward each [`CoreEvent`] produced during the last `tick` to its Bevy
+/// `Event` equivalent. The core is authoritative about what happened; this
+/// system is a straight translation table with no diffing.
+fn forward_core_events(
     core: Res<CoreState>,
     control: Res<CoreControl>,
+    map: Res<CoreEntityMap>,
     mut ev_boosted: EventWriter<PlayerBoosted>,
     mut ev_hooked: EventWriter<PlayerHooked>,
     mut ev_bonked: EventWriter<PlayerBonked>,
@@ -193,53 +193,72 @@ fn diff_and_emit_events(
     mut ev_unpaused: EventWriter<GameUnpaused>,
     mut prev_paused: Local<bool>,
 ) {
-    use fish_game_core::player::PlayerState;
-
-    let prev = &core.prev;
-    let curr = &core.state;
-
-    // Boost edge.
-    if prev.player.state != PlayerState::Boost && curr.player.state == PlayerState::Boost {
-        ev_boosted.send(PlayerBoosted {
-            player: Entity::PLACEHOLDER,
-        });
-    }
-
-    // Ate a worm this tick. `hunger_ticks_remaining` only ever decreases inside
-    // a tick — if it went up, the player ate.
-    if curr.player.hunger_ticks_remaining > prev.player.hunger_ticks_remaining {
-        ev_ate.send(PlayerAte {
-            player_entity: Entity::PLACEHOLDER,
-            worm_entity: Entity::PLACEHOLDER,
-        });
-    }
-
-    // GameOver edge.
-    if prev.phase != GamePhase::GameOver && curr.phase == GamePhase::GameOver {
-        match curr.game_over_cause {
-            Some(GameOverCause::Hooked) => {
+    for event in &core.state.events {
+        match event {
+            CoreEvent::PlayerBoosted => {
+                ev_boosted.send(PlayerBoosted {
+                    player: Entity::PLACEHOLDER,
+                });
+            }
+            CoreEvent::PlayerAte { worm } => {
+                let worm_entity = map
+                    .worms
+                    .get(worm)
+                    .copied()
+                    .unwrap_or(Entity::PLACEHOLDER);
+                ev_ate.send(PlayerAte {
+                    player_entity: Entity::PLACEHOLDER,
+                    worm_entity,
+                });
+            }
+            CoreEvent::PlayerHooked { hook, .. } => {
+                let hook_entity = map
+                    .hooks
+                    .get(hook)
+                    .copied()
+                    .unwrap_or(Entity::PLACEHOLDER);
                 ev_hooked.send(PlayerHooked {
                     player_entity: Entity::PLACEHOLDER,
-                    hook_entity: Entity::PLACEHOLDER,
+                    hook_entity,
                 });
             }
-            Some(GameOverCause::Bonked) => {
+            CoreEvent::PlayerBonked { boat } => {
+                let boat_entity = map
+                    .boats
+                    .get(boat)
+                    .copied()
+                    .unwrap_or(Entity::PLACEHOLDER);
                 ev_bonked.send(PlayerBonked {
                     player_entity: Entity::PLACEHOLDER,
-                    boat_entity: Entity::PLACEHOLDER,
+                    boat_entity,
                 });
             }
-            Some(GameOverCause::Starved) => {
+            CoreEvent::PlayerStarved => {
                 ev_starved.send(PlayerStarved {
                     player_entity: Entity::PLACEHOLDER,
                 });
             }
-            None => {}
+            CoreEvent::GameOver { .. } => {
+                ev_game_over.send(GameOver { winning_boat: None });
+            }
+            // Entity-lifecycle + score/difficulty events are consumed by
+            // `sync_ecs_from_core` and UI code that reads `CoreState`
+            // directly. No Bevy Event mapping needed — suppress explicitly
+            // so a future added variant triggers a compile error.
+            CoreEvent::ScoreIncremented { .. }
+            | CoreEvent::DifficultyIncreased { .. }
+            | CoreEvent::BoatSpawned(_)
+            | CoreEvent::BoatDespawned(_)
+            | CoreEvent::HookSpawned(_)
+            | CoreEvent::HookDespawned(_)
+            | CoreEvent::LineSpawned(_)
+            | CoreEvent::LineDespawned(_)
+            | CoreEvent::WormSpawned(_)
+            | CoreEvent::WormDespawned(_) => {}
         }
-        ev_game_over.send(GameOver { winning_boat: None });
     }
 
-    // Pause edge — fires based on the adapter's `paused` flag, not core phase.
+    // Pause / restart stay adapter-local — core has no concept of them.
     if control.paused && !*prev_paused {
         ev_paused.send(GamePaused);
     } else if !control.paused && *prev_paused {

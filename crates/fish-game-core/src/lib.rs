@@ -22,6 +22,7 @@
 pub mod boat;
 pub mod collision;
 pub mod config;
+pub mod events;
 pub mod input;
 pub mod math;
 pub mod player;
@@ -29,6 +30,7 @@ pub mod rng;
 pub mod state;
 
 pub use config::{ArenaConfig, FishGameConfig, PlayerStatsConfig};
+pub use events::CoreEvent;
 pub use input::FishGameInput;
 pub use state::{FishGameState, GameOverCause, GamePhase};
 

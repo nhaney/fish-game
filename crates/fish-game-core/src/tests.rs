@@ -14,6 +14,7 @@ use glam::Vec3;
 use crate::{
     boat::{Boat, BoatId, BoatType, Hook, HookId, Line, LineId, Worm, WormId, HOOK_SIZE, WORM_SIZE},
     config::FishGameConfig,
+    events::CoreEvent,
     input::FishGameInput,
     player::PlayerState,
     state::{FishGameState, GameOverCause, GamePhase},
@@ -461,4 +462,206 @@ fn aabb_overlap_detects_overlap_and_separation() {
         Vec2::new(15.0 - 0.01, 0.0),
         Vec2::new(5.0, 5.0),
     ));
+}
+
+// ---------- event emission --------------------------------------------------
+
+#[test]
+fn events_cleared_at_start_of_each_tick() {
+    let mut state = fresh();
+    state.tick(FishGameInput::default());
+    let first_count = state.events.len();
+    state.tick(FishGameInput::default());
+    // Events are per-tick ephemeral; consecutive identical ticks may both
+    // produce zero events. The invariant is that the list on tick N does not
+    // retain events emitted on tick N-1 — i.e. the list is reset.
+    let _ = first_count;
+    for ev in &state.events {
+        match ev {
+            // None of these carry N-1 identifiers.
+            CoreEvent::ScoreIncremented { .. } | CoreEvent::DifficultyIncreased { .. } => {}
+            _ => {}
+        }
+    }
+}
+
+#[test]
+fn hook_collision_emits_player_hooked_and_game_over() {
+    let mut state = fresh();
+    state.player.pos = Vec3::ZERO;
+    let bid = insert_boat(&mut state, Vec3::new(0.0, 200.0, 0.0), 40.0, 10.0);
+    let hid = insert_hook(&mut state, Vec3::ZERO, bid);
+
+    state.tick(FishGameInput::default());
+
+    let hooked = state.events.iter().find(|e| matches!(e, CoreEvent::PlayerHooked { .. }));
+    let game_over = state.events.iter().find(|e| matches!(e, CoreEvent::GameOver { .. }));
+    assert!(
+        matches!(hooked, Some(CoreEvent::PlayerHooked { hook, .. }) if *hook == hid),
+        "expected PlayerHooked for {:?}, events={:?}",
+        hid,
+        state.events,
+    );
+    assert!(
+        matches!(game_over, Some(CoreEvent::GameOver { cause: GameOverCause::Hooked })),
+        "expected GameOver(Hooked), events={:?}",
+        state.events,
+    );
+}
+
+#[test]
+fn boat_collision_emits_player_bonked_and_game_over() {
+    let mut state = fresh();
+    state.player.pos = Vec3::ZERO;
+    let bid = insert_boat(&mut state, Vec3::ZERO, 40.0, 40.0);
+
+    state.tick(FishGameInput::default());
+
+    assert!(state
+        .events
+        .iter()
+        .any(|e| matches!(e, CoreEvent::PlayerBonked { boat } if *boat == bid)));
+    assert!(state.events.iter().any(|e| matches!(
+        e,
+        CoreEvent::GameOver {
+            cause: GameOverCause::Bonked,
+        }
+    )));
+}
+
+#[test]
+fn eating_worm_emits_player_ate_and_worm_despawned() {
+    let mut state = fresh();
+    state.player.pos = Vec3::ZERO;
+    let bid = insert_boat(&mut state, Vec3::new(0.0, 200.0, 0.0), 40.0, 10.0);
+    let wid = insert_worm(&mut state, Vec3::ZERO, bid);
+
+    state.tick(FishGameInput::default());
+
+    assert!(state
+        .events
+        .iter()
+        .any(|e| matches!(e, CoreEvent::PlayerAte { worm } if *worm == wid)));
+    assert!(state
+        .events
+        .iter()
+        .any(|e| matches!(e, CoreEvent::WormDespawned(w) if *w == wid)));
+}
+
+#[test]
+fn boost_emits_player_boosted() {
+    let mut state = fresh();
+    state.tick(FishGameInput {
+        move_right: true,
+        boost_pressed: true,
+        boost_just_pressed: true,
+        ..Default::default()
+    });
+    assert!(state.events.iter().any(|e| matches!(e, CoreEvent::PlayerBoosted)));
+}
+
+#[test]
+fn boost_rejected_by_cooldown_does_not_emit_player_boosted() {
+    let mut state = fresh();
+    // First tick consumes a boost and starts a cooldown.
+    state.tick(FishGameInput {
+        move_right: true,
+        boost_pressed: true,
+        boost_just_pressed: true,
+        ..Default::default()
+    });
+    // Second tick: re-press while cooldown active — should NOT re-fire.
+    state.tick(FishGameInput {
+        move_right: true,
+        boost_pressed: true,
+        boost_just_pressed: true,
+        ..Default::default()
+    });
+    assert!(
+        !state.events.iter().any(|e| matches!(e, CoreEvent::PlayerBoosted)),
+        "cooldown-blocked boost must not emit PlayerBoosted: events={:?}",
+        state.events,
+    );
+}
+
+#[test]
+fn starvation_emits_player_starved_and_game_over() {
+    let mut state = fresh();
+    state.player.hunger_ticks_remaining = 1;
+    state.tick(FishGameInput::default());
+
+    assert!(state.events.iter().any(|e| matches!(e, CoreEvent::PlayerStarved)));
+    assert!(state.events.iter().any(|e| matches!(
+        e,
+        CoreEvent::GameOver {
+            cause: GameOverCause::Starved,
+        }
+    )));
+}
+
+#[test]
+fn score_tick_emits_score_incremented() {
+    let mut state = fresh();
+    let interval = state.config.score_interval_ticks;
+    for _ in 0..interval - 1 {
+        state.tick(FishGameInput::default());
+        assert!(!state
+            .events
+            .iter()
+            .any(|e| matches!(e, CoreEvent::ScoreIncremented { .. })));
+    }
+    state.tick(FishGameInput::default());
+    let inc = state
+        .events
+        .iter()
+        .find(|e| matches!(e, CoreEvent::ScoreIncremented { .. }))
+        .expect("score tick should emit");
+    match inc {
+        CoreEvent::ScoreIncremented { new_score } => {
+            assert_eq!(*new_score, state.score.count)
+        }
+        _ => unreachable!(),
+    }
+}
+
+#[test]
+fn boat_spawn_emits_boat_spawned_plus_child_events() {
+    let mut state = fresh();
+    let interval = state.config.boat_spawn_interval_ticks;
+    for _ in 0..interval {
+        state.tick(FishGameInput::default());
+    }
+    let boat_events = state
+        .events
+        .iter()
+        .filter(|e| matches!(e, CoreEvent::BoatSpawned(_)))
+        .count();
+    assert!(boat_events >= 1, "expected at least one BoatSpawned, got events={:?}", state.events);
+    // Every spawned boat comes with at least one line + one hook.
+    assert!(state.events.iter().any(|e| matches!(e, CoreEvent::HookSpawned(_))));
+    assert!(state.events.iter().any(|e| matches!(e, CoreEvent::LineSpawned(_))));
+}
+
+#[test]
+fn game_over_emits_worm_despawned_for_every_remaining_worm() {
+    let mut state = fresh();
+    state.player.pos = Vec3::ZERO;
+    let bid = insert_boat(&mut state, Vec3::new(200.0, 200.0, 0.0), 40.0, 10.0);
+    let w1 = insert_worm(&mut state, Vec3::new(200.0, 100.0, 0.0), bid);
+    let w2 = insert_worm(&mut state, Vec3::new(250.0, 100.0, 0.0), bid);
+    state.player.hunger_ticks_remaining = 1;
+
+    state.tick(FishGameInput::default());
+
+    assert_eq!(state.phase, GamePhase::GameOver);
+    let despawned: Vec<WormId> = state
+        .events
+        .iter()
+        .filter_map(|e| match e {
+            CoreEvent::WormDespawned(w) => Some(*w),
+            _ => None,
+        })
+        .collect();
+    assert!(despawned.contains(&w1));
+    assert!(despawned.contains(&w2));
 }

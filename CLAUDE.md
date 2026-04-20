@@ -77,7 +77,10 @@ let mut state = FishGameState::new(config);          // FishGameConfig
 loop {
     let input = build_input_from_keyboard();         // FishGameInput
     let observed: &FishGameState = state.tick(input);
-    /* render `observed` ... */
+    for event in &observed.events {                  // CoreEvent
+        /* forward to SFX / UI / ECS sync ... */
+    }
+    /* render `observed.player`, `observed.boats`, ... */
 }
 ```
 
@@ -98,11 +101,20 @@ Rules of the kernel:
   Restart = caller drops the state and constructs a new `FishGameState`.
   This keeps the input log a replay records purely about gameplay.
 
-`tick()` returns `&FishGameState` rather than an event stream. The
-presentation layer takes a snapshot of the state before each tick and
-diffs `prev` vs `curr` to derive transitions (boost started, worm eaten,
-game over). This means the simulation has a single source of truth and
-the same diff logic works for both live play and replay verification.
+`tick()` returns `&FishGameState` and additionally exposes a typed event
+stream on `state.events` — a `Vec<CoreEvent>` populated during the tick
+and cleared at the top of the next one. Core is authoritative about what
+happened: every transition a consumer might care about (player hooked,
+worm eaten, game over, boat spawned, score ticked, …) is emitted by the
+simulation at the moment it happens. Presentation forwards these events
+to its Bevy equivalents rather than re-deriving them from state diffs —
+this removed a whole class of "did X happen this tick?" checks from the
+adapter.
+
+Events do NOT contribute to `state.hash()` and are `#[serde(skip)]` — they
+describe *how* we got to the current state, not the state itself. Replays
+store only `(config, inputs)` and rebuild the event stream on replay by
+re-ticking.
 
 Tick pipeline (inside `state::tick_running`):
 
@@ -135,12 +147,13 @@ this guarantee should add a regression test here.
 
 A Bevy 0.13 `App` composed of plugins registered in `src/main.rs`:
 
-- `core_adapter::CorePlugin` — owns `CoreState` (`state` + `prev` snapshot),
-  drives `state.tick(input)` from `FixedUpdate`, diffs prev/curr to emit
-  the legacy Bevy events (`PlayerHooked`, `PlayerAte`, `GameOver`, …), and
-  spawns/despawns Bevy entities to mirror the core's slotmaps via a
-  `CoreEntityMap: BTreeMap<CoreId, Entity>`. Pause and restart lifecycle
-  live here, not in core.
+- `core_adapter::CorePlugin` — owns `CoreState` (just `state`; no prev
+  snapshot), drives `state.tick(input)` from `FixedUpdate`, and forwards
+  each `CoreEvent` on `state.events` to its Bevy `Event` equivalent
+  (`PlayerHooked`, `PlayerAte`, `GameOver`, …). Also mirrors the core's
+  slotmaps into Bevy entities via `CoreEntityMap: BTreeMap<CoreId, Entity>`.
+  Pause and restart lifecycle live here, not in core — pause just stops
+  calling `tick`, restart rebuilds `CoreState` with a fresh seed.
 - `shared::SharedPlugin` — system-set ordering, camera, arena, cross-cutting
   Bevy events.
 - `leaderboard::LeaderboardPlugin` — local high-score persistence (native
@@ -164,19 +177,29 @@ the comments in `stages.rs`.
 
 #### Events glue
 
-Plugins are decoupled by `Event`s. Key events (synthesized by the adapter
-from state diffs, not by core):
+Plugins are decoupled by Bevy `Event`s. Gameplay events are produced by
+`fish-game-core` as `CoreEvent` variants and **forwarded** by the adapter's
+`forward_core_events` system — the adapter is a translation table, not a
+diff-based detector.
 
 - Player lifecycle: `PlayerHooked`, `PlayerStarved`, `PlayerBonked`,
-  `PlayerAte`, `PlayerBoosted` (`player::events`)
-- Game lifecycle: `GameOver`, `GamePaused`, `GameUnpaused`,
-  `GameRestarted` (`shared::game`)
+  `PlayerAte`, `PlayerBoosted` (`player::events`) — forwarded from the
+  corresponding `CoreEvent` variants.
+- Game lifecycle: `GameOver` is forwarded from `CoreEvent::GameOver`;
+  `GamePaused` / `GameUnpaused` / `GameRestarted` are emitted by the
+  adapter itself since pause/restart are presentation-only concerns
+  (`shared::game`).
 - Generic: `DestinationReached` (`shared::movement`), `ScoreSaved`
-  (`leaderboard`)
+  (`leaderboard`).
 
 Emit in `EmitEventsSet`, consume in `HandleEventsSet` on the same frame.
 Collision systems emit in `CalculateCollisionsSet`; those events are
 consumed on the *next* frame's `HandleEventsSet`.
+
+When you add a new gameplay transition: emit a new `CoreEvent` variant
+from the site in core where it happens, then add a match arm in
+`forward_core_events`. Do NOT reach for `prev` / `curr` state diffing in
+presentation — that pattern was removed on purpose.
 
 #### Rendering
 

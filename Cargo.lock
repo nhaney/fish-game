@@ -1625,6 +1625,7 @@ dependencies = [
  "bevy",
  "bevy_prototype_lyon",
  "fish-game-core",
+ "fish-game-replay",
  "serde",
  "serde_json",
  "wasm-bindgen",

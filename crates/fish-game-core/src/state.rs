@@ -7,6 +7,7 @@ use crate::boat::{
 };
 use crate::collision::aabb_overlap;
 use crate::config::FishGameConfig;
+use crate::events::CoreEvent;
 use crate::input::FishGameInput;
 use crate::player::{
     self, ActiveBoost, BoostCooldown, Player, PlayerState,
@@ -61,6 +62,12 @@ pub struct FishGameState {
     pub difficulty: Difficulty,
     pub spawn_ticks: SpawnTicks,
     pub config: FishGameConfig,
+    /// Transitions emitted during the most recent `tick` call. Cleared at the
+    /// top of each tick; presentation iterates these to drive Bevy events.
+    /// Skipped in serialization since events are ephemeral — they describe
+    /// how we got to the current state, not part of the state itself.
+    #[serde(skip)]
+    pub events: Vec<CoreEvent>,
 }
 
 impl FishGameState {
@@ -90,12 +97,17 @@ impl FishGameState {
                 boats_interval_remaining: config.boat_spawn_interval_ticks,
             },
             config,
+            events: Vec::new(),
         }
     }
 
     /// Advance the simulation by one fixed tick. State is owned by core;
-    /// callers observe it through the returned reference (no event stream).
+    /// callers observe it through the returned reference. Transitions that
+    /// happened during this tick are in [`FishGameState::events`] — callers
+    /// drain/iterate those rather than diffing state against a previous
+    /// snapshot.
     pub fn tick(&mut self, input: FishGameInput) -> &FishGameState {
+        self.events.clear();
         self.tick = self.tick.wrapping_add(1);
 
         match self.phase {
@@ -155,34 +167,42 @@ fn tick_game_over(state: &mut FishGameState) {
         &mut state.worms,
     );
     boat::step_reeling_hooks(dt, &mut state.hooks, &mut state.lines);
-    boat::despawn_offscreen_boats(
+    let despawned = boat::despawn_offscreen_boats(
         &state.config.arena,
         &mut state.boats,
         &mut state.hooks,
         &mut state.lines,
         &mut state.worms,
     );
+    for d in &despawned {
+        emit_despawned_boat(&mut state.events, d);
+    }
 }
 
 fn tick_score_and_difficulty(state: &mut FishGameState) {
-    let s = &mut state.score;
-    if s.interval_ticks_remaining > 0 {
-        s.interval_ticks_remaining -= 1;
+    if state.score.interval_ticks_remaining > 0 {
+        state.score.interval_ticks_remaining -= 1;
     }
-    if s.interval_ticks_remaining == 0 {
-        s.count += 1;
-        s.interval_ticks_remaining = state.config.score_interval_ticks;
+    if state.score.interval_ticks_remaining == 0 {
+        state.score.count += 1;
+        state.score.interval_ticks_remaining = state.config.score_interval_ticks;
+        state.events.push(CoreEvent::ScoreIncremented {
+            new_score: state.score.count,
+        });
     }
 
-    let d = &mut state.difficulty;
-    if d.interval_ticks_remaining > 0 {
-        d.interval_ticks_remaining -= 1;
+    if state.difficulty.interval_ticks_remaining > 0 {
+        state.difficulty.interval_ticks_remaining -= 1;
     }
-    if d.interval_ticks_remaining == 0 {
-        if d.multiplier < state.config.max_difficulty {
-            d.multiplier += 1;
+    if state.difficulty.interval_ticks_remaining == 0 {
+        let bumped = state.difficulty.multiplier < state.config.max_difficulty;
+        if bumped {
+            state.difficulty.multiplier += 1;
+            state.events.push(CoreEvent::DifficultyIncreased {
+                new_multiplier: state.difficulty.multiplier,
+            });
         }
-        d.interval_ticks_remaining = state.config.difficulty_interval_ticks;
+        state.difficulty.interval_ticks_remaining = state.config.difficulty_interval_ticks;
     }
 }
 
@@ -211,19 +231,19 @@ fn tick_hunger(state: &mut FishGameState) {
         state.player.hunger_ticks_remaining -= 1;
     }
     if state.player.hunger_ticks_remaining == 0 {
+        state.events.push(CoreEvent::PlayerStarved);
         enter_game_over(state, GameOverCause::Starved, None);
     }
 }
 
 fn tick_boat_spawner(state: &mut FishGameState) {
-    let s = &mut state.spawn_ticks;
-    if s.boats_interval_remaining > 0 {
-        s.boats_interval_remaining -= 1;
+    if state.spawn_ticks.boats_interval_remaining > 0 {
+        state.spawn_ticks.boats_interval_remaining -= 1;
     }
-    if s.boats_interval_remaining == 0 {
+    if state.spawn_ticks.boats_interval_remaining == 0 {
         let count = boat::roll_boats_per_spawn(state.difficulty.multiplier, &mut state.rng.rng);
         for _ in 0..count {
-            boat::spawn_random_boat(
+            let spawned = boat::spawn_random_boat(
                 &state.config,
                 state.difficulty.multiplier,
                 &mut state.rng.rng,
@@ -232,9 +252,36 @@ fn tick_boat_spawner(state: &mut FishGameState) {
                 &mut state.lines,
                 &mut state.worms,
             );
+            emit_spawned_boat(&mut state.events, &spawned);
         }
-        s.boats_interval_remaining = state.config.boat_spawn_interval_ticks;
+        state.spawn_ticks.boats_interval_remaining = state.config.boat_spawn_interval_ticks;
     }
+}
+
+fn emit_spawned_boat(events: &mut Vec<CoreEvent>, spawned: &boat::SpawnedBoat) {
+    events.push(CoreEvent::BoatSpawned(spawned.boat_id));
+    for &lid in &spawned.line_ids {
+        events.push(CoreEvent::LineSpawned(lid));
+    }
+    for &hid in &spawned.hook_ids {
+        events.push(CoreEvent::HookSpawned(hid));
+    }
+    for &wid in &spawned.worm_ids {
+        events.push(CoreEvent::WormSpawned(wid));
+    }
+}
+
+fn emit_despawned_boat(events: &mut Vec<CoreEvent>, despawned: &boat::DespawnedBoat) {
+    for &wid in &despawned.worm_ids {
+        events.push(CoreEvent::WormDespawned(wid));
+    }
+    for &hid in &despawned.hook_ids {
+        events.push(CoreEvent::HookDespawned(hid));
+    }
+    for &lid in &despawned.line_ids {
+        events.push(CoreEvent::LineDespawned(lid));
+    }
+    events.push(CoreEvent::BoatDespawned(despawned.boat_id));
 }
 
 fn tick_player_input_movement(state: &mut FishGameState, input: &FishGameInput) {
@@ -250,7 +297,9 @@ fn tick_player_input_movement(state: &mut FishGameState, input: &FishGameInput) 
     state.player.facing_right = facing_right;
 
     if input.boost_just_pressed {
-        player::try_start_boost(&mut state.player, &state.config.player, target_speed);
+        if player::try_start_boost(&mut state.player, &state.config.player, target_speed) {
+            state.events.push(CoreEvent::PlayerBoosted);
+        }
     } else if target_speed != Vec3::ZERO {
         if player::can_transition_to(state.player.state, PlayerState::Swim, state.player.boost_blocked) {
             state.player.state = PlayerState::Swim;
@@ -342,6 +391,9 @@ fn check_collisions(state: &mut FishGameState) {
     }
     if let Some(hid) = hit_hook {
         let boat_id = state.hooks.get(hid).map(|h| h.boat_id);
+        state
+            .events
+            .push(CoreEvent::PlayerHooked { hook: hid, boat: boat_id });
         enter_game_over(state, GameOverCause::Hooked, boat_id);
         boat::start_reel_in(hid, &mut state.hooks, &state.lines);
         return;
@@ -358,7 +410,10 @@ fn check_collisions(state: &mut FishGameState) {
         }
     }
     if let Some(wid) = eaten_worm {
-        boat::despawn_worm(wid, &mut state.worms, &mut state.boats);
+        if boat::despawn_worm(wid, &mut state.worms, &mut state.boats) {
+            state.events.push(CoreEvent::PlayerAte { worm: wid });
+            state.events.push(CoreEvent::WormDespawned(wid));
+        }
         state.score.count += state.config.score_per_worm;
         let extra = state.config.player.extra_hunger_ticks_per_worm;
         let cap = state.config.player.hunger_ticks;
@@ -380,6 +435,7 @@ fn check_collisions(state: &mut FishGameState) {
         }
     }
     if let Some(bid) = hit_boat {
+        state.events.push(CoreEvent::PlayerBonked { boat: bid });
         enter_game_over(state, GameOverCause::Bonked, Some(bid));
     }
 }
@@ -391,11 +447,17 @@ fn enter_game_over(state: &mut FishGameState, cause: GameOverCause, boat: Option
     state.phase = GamePhase::GameOver;
     state.game_over_cause = Some(cause);
     state.game_over_boat = boat;
-    boat::despawn_all_worms(&mut state.worms, &mut state.boats);
+
+    let removed_worms = boat::despawn_all_worms(&mut state.worms, &mut state.boats);
+    for wid in removed_worms {
+        state.events.push(CoreEvent::WormDespawned(wid));
+    }
     boat::trigger_boat_exit(boat, &mut state.boats);
     // Freeze player velocity — post-death "animation" is presentation.
     state.player.velocity = Vec3::ZERO;
     state.player.boost_data = None;
+
+    state.events.push(CoreEvent::GameOver { cause });
 }
 
 // --- Deterministic hashing --------------------------------------------------

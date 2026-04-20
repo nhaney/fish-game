@@ -132,8 +132,23 @@ pub fn roll_boat_stats(difficulty: u8, rng: &mut ChaCha8Rng) -> BoatStats {
     }
 }
 
+/// Outcome of a boat spawn — the new boat plus every child entity created
+/// alongside it. Returned so the caller can emit `*Spawned` events without
+/// diffing slotmap membership.
 pub struct SpawnedBoat {
     pub boat_id: BoatId,
+    pub hook_ids: Vec<HookId>,
+    pub line_ids: Vec<LineId>,
+    pub worm_ids: Vec<WormId>,
+}
+
+/// Outcome of a boat despawn — identifiers of everything removed so the
+/// caller can emit `*Despawned` events.
+pub struct DespawnedBoat {
+    pub boat_id: BoatId,
+    pub hook_ids: Vec<HookId>,
+    pub line_ids: Vec<LineId>,
+    pub worm_ids: Vec<WormId>,
 }
 
 /// Spawn a boat and all its children (rods, lines, hooks, worms) into the
@@ -265,11 +280,16 @@ pub fn spawn_boat(
     }
 
     let boat = boats.get_mut(boat_id).unwrap();
-    boat.hook_ids = new_hook_ids;
-    boat.line_ids = new_line_ids;
-    boat.worm_ids = new_worm_ids;
+    boat.hook_ids = new_hook_ids.clone();
+    boat.line_ids = new_line_ids.clone();
+    boat.worm_ids = new_worm_ids.clone();
 
-    SpawnedBoat { boat_id }
+    SpawnedBoat {
+        boat_id,
+        hook_ids: new_hook_ids,
+        line_ids: new_line_ids,
+        worm_ids: new_worm_ids,
+    }
 }
 
 /// Apply the boat's Y-rotation-around-pi to a local child offset when building
@@ -350,7 +370,7 @@ pub fn despawn_offscreen_boats(
     hooks: &mut SlotMap<HookId, Hook>,
     lines: &mut SlotMap<LineId, Line>,
     worms: &mut SlotMap<WormId, Worm>,
-) {
+) -> Vec<DespawnedBoat> {
     let arena_half_width = arena.width / 2.0;
     let mut boats_to_despawn: Vec<BoatId> = Vec::new();
 
@@ -381,19 +401,27 @@ pub fn despawn_offscreen_boats(
         }
     }
 
+    let mut despawned = Vec::with_capacity(boats_to_despawn.len());
     for boat_id in boats_to_despawn {
         if let Some(boat) = boats.remove(boat_id) {
-            for hid in boat.hook_ids {
+            for &hid in &boat.hook_ids {
                 hooks.remove(hid);
             }
-            for lid in boat.line_ids {
+            for &lid in &boat.line_ids {
                 lines.remove(lid);
             }
-            for wid in boat.worm_ids {
+            for &wid in &boat.worm_ids {
                 worms.remove(wid);
             }
+            despawned.push(DespawnedBoat {
+                boat_id,
+                hook_ids: boat.hook_ids,
+                line_ids: boat.line_ids,
+                worm_ids: boat.worm_ids,
+            });
         }
     }
+    despawned
 }
 
 /// On GameOver: turn every non-winning boat around and double its speed. The
@@ -433,28 +461,37 @@ pub fn start_reel_in(
     hook.reel_destination = Some(line.start_pos);
 }
 
-/// Remove a single worm (player ate it).
+/// Remove a single worm (player ate it). Returns `true` if the worm actually
+/// existed and was removed, so the caller knows whether to emit a
+/// `WormDespawned` event.
 pub fn despawn_worm(
     worm_id: WormId,
     worms: &mut SlotMap<WormId, Worm>,
     boats: &mut SlotMap<BoatId, Boat>,
-) {
+) -> bool {
     if let Some(worm) = worms.remove(worm_id) {
         if let Some(boat) = boats.get_mut(worm.boat_id) {
             boat.worm_ids.retain(|&w| w != worm_id);
         }
+        true
+    } else {
+        false
     }
 }
 
 /// Despawn every worm (called on GameOver to mirror original cosmetic clear).
+/// Returns the IDs of every worm that was removed so the caller can emit
+/// `WormDespawned` events.
 pub fn despawn_all_worms(
     worms: &mut SlotMap<WormId, Worm>,
     boats: &mut SlotMap<BoatId, Boat>,
-) {
+) -> Vec<WormId> {
+    let removed: Vec<WormId> = worms.iter().map(|(id, _)| id).collect();
     worms.clear();
     for (_, boat) in boats.iter_mut() {
         boat.worm_ids.clear();
     }
+    removed
 }
 
 /// How many boats to spawn this tick based on current difficulty, matching
