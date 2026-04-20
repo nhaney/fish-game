@@ -1,24 +1,23 @@
 //! Deterministic simulation core for Stay Off the Line! Remastered.
 //!
-//! This crate holds the entire game simulation with **no Bevy dependency**.
-//! The flow is:
+//! This crate is the simulation kernel: no Bevy, no rendering, no audio, no
+//! pause/restart lifecycle, no replay I/O. The presentation layer constructs a
+//! [`FishGameState`] from a [`FishGameConfig`], translates per-tick input into
+//! a [`FishGameInput`], and observes the returned `&FishGameState`.
 //!
-//! 1. The Bevy presentation layer constructs a [`FishGameState`] from a
-//!    [`FishGameConfig`].
-//! 2. On each fixed-update tick it translates keyboard state into a
-//!    [`FishGameInput`] and calls [`FishGameState::tick`].
-//! 3. `tick` mutates the state in place and returns `&FishGameState`. The
-//!    presentation layer reads the reference, diffs it against its previous
-//!    snapshot, and drives SFX/UI/animations from the observable transitions.
-//! 4. For replay verification, record the `(config, inputs)` pair and hash
-//!    the final state — cross-target determinism is a hard invariant of this
-//!    crate. See [`replay`].
-//!
-//! Core forbids:
+//! Cross-target determinism is the central invariant. The same
+//! `(FishGameConfig, sequence-of-FishGameInput)` MUST produce the same
+//! [`FishGameState::hash`] on native x86-64, ARM, and `wasm32`. To preserve
+//! that, core forbids:
 //! - `bevy`, `web-sys`, filesystem / network access
-//! - `thread_rng` / wall-clock entropy
+//! - `thread_rng` / wall-clock entropy (rng comes from `config.seed`)
 //! - `HashMap` iteration on hot paths (use `SlotMap`/`BTreeMap`)
-//! - `f32::sin`/`cos`/`sqrt`/`Vec3::normalize` (route through [`math`])
+//! - `f32::sin` / `cos` / `sqrt` / `Vec3::normalize` (route through [`math`]
+//!   and `glam`'s `libm` feature)
+//!
+//! Replay recording + verification lives in the separate `fish-game-replay`
+//! crate so core has zero serialization concerns beyond the `Serialize` /
+//! `Deserialize` derives on its public types.
 
 pub mod boat;
 pub mod collision;
@@ -26,13 +25,11 @@ pub mod config;
 pub mod input;
 pub mod math;
 pub mod player;
-pub mod replay;
 pub mod rng;
 pub mod state;
 
 pub use config::{ArenaConfig, FishGameConfig, PlayerStatsConfig};
 pub use input::FishGameInput;
-pub use replay::{record, verify, Replay, VerifyResult};
 pub use state::{FishGameState, GameOverCause, GamePhase};
 
 #[cfg(test)]

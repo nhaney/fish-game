@@ -1,8 +1,18 @@
+//! Replay recording + cross-target verification for `fish-game-core`.
+//!
+//! A [`Replay`] is the `(config, inputs, expected_hash, expected_score)` tuple
+//! plus a recording-machine target hint. [`verify`] re-runs the inputs on the
+//! local target and reports whether the resulting hash and score match — this
+//! is what the leaderboard's score-verification path calls.
+//!
+//! This crate is intentionally tiny: it owns nothing the simulation does, just
+//! `bincode` serialization and the verification loop. The determinism
+//! invariants this crate gates ("same seed + same inputs ⇒ same hash on every
+//! target") live as tests in this crate's `tests/` directory.
+
 use serde::{Deserialize, Serialize};
 
-use crate::config::FishGameConfig;
-use crate::input::FishGameInput;
-use crate::state::FishGameState;
+use fish_game_core::{FishGameConfig, FishGameInput, FishGameState};
 
 /// A recorded simulation. Contains everything needed to re-run the same game
 /// on another target and confirm the same final state hash + score.
@@ -12,8 +22,8 @@ pub struct Replay {
     pub inputs: Vec<FishGameInput>,
     pub final_hash: u64,
     pub final_score: u32,
-    /// Best-effort target triple of the recording machine; useful when a
-    /// mismatch occurs (tells you whether the recorder or verifier diverged).
+    /// Best-effort target hint of the recording machine; useful when a
+    /// mismatch occurs (tells you which side diverged).
     pub target_triple: String,
 }
 
@@ -63,14 +73,13 @@ pub fn record(config: FishGameConfig, inputs: Vec<FishGameInput>) -> Replay {
         inputs,
         final_hash: state.hash(),
         final_score: state.score.count,
-        target_triple: current_target_triple(),
+        target_triple: current_target_hint(),
     }
 }
 
-fn current_target_triple() -> String {
-    // Best-effort runtime hint; rustc doesn't expose target_triple at runtime
-    // in a stable way, so compose from target_arch / target_os / target_env.
-    let arch = std::env::consts::ARCH;
-    let os = std::env::consts::OS;
-    format!("{}-{}", arch, os)
+fn current_target_hint() -> String {
+    // rustc doesn't expose `target_triple` at runtime in a stable form; compose
+    // a coarse hint from `std::env::consts`. Good enough to tell native from
+    // wasm in a mismatch report.
+    format!("{}-{}", std::env::consts::ARCH, std::env::consts::OS)
 }

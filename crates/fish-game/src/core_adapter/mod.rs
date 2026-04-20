@@ -9,10 +9,16 @@
 //!      SFX/UI consumers stay as-is.
 //!   4. Mirrors core entities (boats, hooks, worms) into Bevy entities via a
 //!      `CoreEntityMap`, spawning/despawning as slotmap membership changes.
+//!
+//! Lifecycle (pause / restart) lives here, NOT in core:
+//!   - Pause ⇒ `CoreControl.paused` flips; `tick_core_from_input` returns
+//!     early so core sees no ticks while paused.
+//!   - Restart ⇒ rebuild `CoreState` with a freshly-derived seed. The old
+//!     simulation ends cleanly; the new one starts at tick 0.
 
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
-use fish_game_core::boat::{self as core_boat, BoatId, HookId, LineId, WormId};
+use fish_game_core::boat::{BoatId, HookId, LineId, WormId};
 use fish_game_core::{FishGameConfig, FishGameInput, FishGameState, GameOverCause, GamePhase};
 use rand::{thread_rng, Rng};
 use std::collections::BTreeMap;
@@ -31,21 +37,36 @@ use crate::shared::render::RenderLayer;
 pub struct CoreState {
     pub state: FishGameState,
     pub prev: FishGameState,
-    /// True on the tick a `GameRestarted` event should fire. Maintained here
-    /// so restart-reactive systems can look at a single place.
-    pub restart_pending: bool,
 }
 
 impl CoreState {
     pub fn new(config: FishGameConfig) -> Self {
         let state = FishGameState::new(config);
         let prev = state.clone();
-        Self {
-            state,
-            prev,
-            restart_pending: false,
-        }
+        Self { state, prev }
     }
+
+    /// Replace the current sim with a fresh one (same tuning, new seed). The
+    /// previous-state snapshot is reset to match so diff-based event
+    /// emission doesn't fire spurious "started" transitions from leftover
+    /// state. Used by restart.
+    pub fn reset_with(&mut self, config: FishGameConfig) {
+        self.state = FishGameState::new(config);
+        self.prev = self.state.clone();
+    }
+}
+
+/// Adapter-level lifecycle controls. Pause and restart are presentation
+/// concerns — core doesn't know about them.
+#[derive(Resource, Default)]
+pub struct CoreControl {
+    pub paused: bool,
+    /// Set to true when the UI wants a pause toggle on the next tick boundary.
+    /// Bounced through a resource so UI doesn't need to know about `FishGameInput`.
+    pub pause_toggle_pending: bool,
+    /// Set to true on the tick the sim was just restarted. Consumed by the
+    /// diff-based event emitter to fire a single `GameRestarted` event.
+    pub restart_fired: bool,
 }
 
 /// Maps core slotmap keys to Bevy `Entity` so presentation can sync sprites.
@@ -57,8 +78,8 @@ pub struct CoreEntityMap {
     pub worms: BTreeMap<WormId, Entity>,
 }
 
-/// Resource holding the lyon stroke color / texture handles for hook / line / worm
-/// rendering. Built from `AssetServer` at startup.
+/// Resource holding the lyon stroke color / texture handles for hook / line /
+/// worm rendering. Built from `AssetServer` at startup.
 #[derive(Resource)]
 pub struct BoatAssets {
     pub boat: Handle<Image>,
@@ -85,14 +106,13 @@ pub struct CorePlugin;
 
 impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
-        let mut seed = [0u8; 32];
-        thread_rng().fill(&mut seed);
-        let config = FishGameConfig::default().with_seed(seed);
+        let config = FishGameConfig::default().with_seed(random_seed());
         let core_state = CoreState::new(config);
 
         app.insert_resource(core_state)
             .init_resource::<CoreEntityMap>()
-            .init_resource::<BoatAssets>();
+            .init_resource::<BoatAssets>()
+            .init_resource::<CoreControl>();
 
         app.insert_resource(Time::<Fixed>::from_hz(60.0));
 
@@ -103,6 +123,14 @@ impl Plugin for CorePlugin {
     }
 }
 
+fn random_seed() -> [u8; 32] {
+    // Only called at startup and on restart — presentation may use any entropy
+    // source it wants. Core never calls `thread_rng`.
+    let mut seed = [0u8; 32];
+    thread_rng().fill(&mut seed);
+    seed
+}
+
 fn build_input(keyboard: &ButtonInput<KeyCode>) -> FishGameInput {
     FishGameInput {
         move_left: keyboard.pressed(KeyCode::ArrowLeft) || keyboard.pressed(KeyCode::KeyA),
@@ -111,34 +139,49 @@ fn build_input(keyboard: &ButtonInput<KeyCode>) -> FishGameInput {
         move_down: keyboard.pressed(KeyCode::ArrowDown) || keyboard.pressed(KeyCode::KeyS),
         boost_pressed: keyboard.pressed(KeyCode::Space),
         boost_just_pressed: keyboard.just_pressed(KeyCode::Space),
-        restart: keyboard.just_pressed(KeyCode::KeyR),
-        pause_toggle: false,
     }
 }
 
 fn tick_core_from_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut core: ResMut<CoreState>,
-    pause_input: Res<PauseInput>,
+    mut control: ResMut<CoreControl>,
 ) {
-    let mut input = build_input(&keyboard);
-    input.pause_toggle = pause_input.toggle_pending;
+    // Handle pause toggle first so it takes effect this tick.
+    let keyboard_pause = keyboard.just_pressed(KeyCode::Escape);
+    if keyboard_pause || control.pause_toggle_pending {
+        control.pause_toggle_pending = false;
+        // Paused games can only be unpaused if they're still in progress.
+        if core.state.phase != GamePhase::GameOver {
+            control.paused = !control.paused;
+        }
+    }
 
-    core.restart_pending = input.restart;
+    // Handle restart.
+    control.restart_fired = false;
+    if keyboard.just_pressed(KeyCode::KeyR) {
+        let config = core.state.config.clone().with_seed(random_seed());
+        core.reset_with(config);
+        control.paused = false;
+        control.restart_fired = true;
+        return;
+    }
+
+    if control.paused {
+        // While paused we still need `prev == state` so diffs don't fire
+        // stale events on unpause.
+        core.prev = core.state.clone();
+        return;
+    }
+
+    let input = build_input(&keyboard);
     core.prev = core.state.clone();
     core.state.tick(input);
 }
 
-/// Shared "pause was clicked this frame" flag, set by the pause-button UI
-/// system before the FixedUpdate tick runs. It bounces through this resource
-/// so the UI doesn't need to know about `FishGameInput`.
-#[derive(Resource, Default)]
-pub struct PauseInput {
-    pub toggle_pending: bool,
-}
-
 fn diff_and_emit_events(
     core: Res<CoreState>,
+    control: Res<CoreControl>,
     mut ev_boosted: EventWriter<PlayerBoosted>,
     mut ev_hooked: EventWriter<PlayerHooked>,
     mut ev_bonked: EventWriter<PlayerBonked>,
@@ -148,23 +191,22 @@ fn diff_and_emit_events(
     mut ev_restart: EventWriter<GameRestarted>,
     mut ev_paused: EventWriter<GamePaused>,
     mut ev_unpaused: EventWriter<GameUnpaused>,
+    mut prev_paused: Local<bool>,
 ) {
     use fish_game_core::player::PlayerState;
 
     let prev = &core.prev;
     let curr = &core.state;
 
-    // Player state edges.
+    // Boost edge.
     if prev.player.state != PlayerState::Boost && curr.player.state == PlayerState::Boost {
         ev_boosted.send(PlayerBoosted {
             player: Entity::PLACEHOLDER,
         });
     }
 
-    // Worm eaten: any worm id that was in prev but gone now and wasn't from a
-    // boat despawn. Approximation: if score rose by >= score_per_worm this
-    // tick, fire ate. Cleaner: use the hunger buff as a signal (it ticks up
-    // only on eat).
+    // Ate a worm this tick. `hunger_ticks_remaining` only ever decreases inside
+    // a tick — if it went up, the player ate.
     if curr.player.hunger_ticks_remaining > prev.player.hunger_ticks_remaining {
         ev_ate.send(PlayerAte {
             player_entity: Entity::PLACEHOLDER,
@@ -172,7 +214,7 @@ fn diff_and_emit_events(
         });
     }
 
-    // GameOver edges.
+    // GameOver edge.
     if prev.phase != GamePhase::GameOver && curr.phase == GamePhase::GameOver {
         match curr.game_over_cause {
             Some(GameOverCause::Hooked) => {
@@ -194,24 +236,18 @@ fn diff_and_emit_events(
             }
             None => {}
         }
-        ev_game_over.send(GameOver {
-            winning_boat: None,
-        });
+        ev_game_over.send(GameOver { winning_boat: None });
     }
 
-    // Pause edges.
-    match (prev.phase, curr.phase) {
-        (GamePhase::Running, GamePhase::Paused) => {
-            ev_paused.send(GamePaused);
-        }
-        (GamePhase::Paused, GamePhase::Running) => {
-            ev_unpaused.send(GameUnpaused);
-        }
-        _ => {}
+    // Pause edge — fires based on the adapter's `paused` flag, not core phase.
+    if control.paused && !*prev_paused {
+        ev_paused.send(GamePaused);
+    } else if !control.paused && *prev_paused {
+        ev_unpaused.send(GameUnpaused);
     }
+    *prev_paused = control.paused;
 
-    // Restart edges: signalled up through `restart_pending`.
-    if core.restart_pending {
+    if control.restart_fired {
         ev_restart.send(GameRestarted);
     }
 }
@@ -229,9 +265,7 @@ fn sync_ecs_from_core(
     let state = &core.state;
 
     // --- Boats ---
-    let mut seen_boats: Vec<BoatId> = Vec::new();
     for (bid, boat) in state.boats.iter() {
-        seen_boats.push(bid);
         if let Some(&entity) = map.boats.get(&bid) {
             if let Ok(mut tf) = transforms.get_mut(entity) {
                 tf.translation = boat.pos;
@@ -396,8 +430,6 @@ fn sync_ecs_from_core(
             false
         }
     });
-
-    let _ = core_boat::HOOK_SIZE;
 }
 
 #[derive(Component)]

@@ -2,6 +2,7 @@
 members = [
     "crates/fish-game",
     "crates/fish-game-core",
+    "crates/fish-game-replay",
     "tools/replay-verify",
 ]
 resolver = "2"
@@ -13,6 +14,7 @@ edition = "2021"
 
 [workspace.dependencies]
 fish-game-core = { path = "crates/fish-game-core" }
+fish-game-replay = { path = "crates/fish-game-replay" }
 
 glam = { version = "0.25", default-features = false, features = ["libm", "serde"] }
 rand = "0.8.5"

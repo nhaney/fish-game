@@ -40,6 +40,8 @@ jobs:
           key: ${{ runner.os }}-cargo-core-${{ hashFiles('**/Cargo.lock') }}
       - name: Test fish-game-core
         run: cargo test -p fish-game-core --locked
+      - name: Test fish-game-replay (determinism + round-trip)
+        run: cargo test -p fish-game-replay --locked
       - name: Build replay-verify
         run: cargo build -p replay-verify --locked
       - name: Verify fish-game-core has no bevy dependency

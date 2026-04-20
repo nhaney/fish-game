@@ -16,6 +16,7 @@ glam = { workspace = true }
 libm = "0.2"
 rand = { workspace = true }
 rand_chacha = { workspace = true }
+# `Serialize` / `Deserialize` derives so dependent crates (replay) can
+# serialize without core touching any concrete format.
 serde = { workspace = true }
-bincode = { workspace = true }
 slotmap = { workspace = true }

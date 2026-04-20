@@ -1,6 +1,6 @@
 use std::{env, fs, process};
 
-use fish_game_core::replay;
+use fish_game_replay as replay;
 
 fn main() {
     let mut args = env::args().skip(1);
@@ -20,7 +20,7 @@ fn main() {
         }
     };
 
-    let replay = match replay::Replay::decode(&bytes) {
+    let recorded = match replay::Replay::decode(&bytes) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("could not decode replay: {}", e);
@@ -28,11 +28,11 @@ fn main() {
         }
     };
 
-    let result = replay::verify(&replay);
-    println!("recorded target : {}", replay.target_triple);
-    println!("expected hash   : {:#018x}", replay.final_hash);
+    let result = replay::verify(&recorded);
+    println!("recorded target : {}", recorded.target_triple);
+    println!("expected hash   : {:#018x}", recorded.final_hash);
     println!("actual hash     : {:#018x}", result.actual_hash);
-    println!("expected score  : {}", replay.final_score);
+    println!("expected score  : {}", recorded.final_score);
     println!("actual score    : {}", result.actual_score);
 
     if result.hash_matches && result.score_matches {

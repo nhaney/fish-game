@@ -5,4 +5,4 @@ authors.workspace = true
 edition.workspace = true
 
 [dependencies]
-fish-game-core = { workspace = true }
+fish-game-replay = { workspace = true }

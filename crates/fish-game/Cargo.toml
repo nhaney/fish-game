@@ -40,6 +40,7 @@ dev = [
 
 [dependencies]
 fish-game-core = { workspace = true }
+fish-game-replay = { workspace = true }
 
 bevy = { version = "0.13.2", default-features = false }
 bevy_prototype_lyon = "0.11"

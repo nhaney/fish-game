@@ -16,7 +16,6 @@ use crate::rng::GameRng;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GamePhase {
     Running,
-    Paused,
     GameOver,
 }
 
@@ -50,7 +49,6 @@ pub struct SpawnTicks {
 pub struct FishGameState {
     pub tick: u64,
     pub phase: GamePhase,
-    pub phase_prev: GamePhase,
     pub game_over_cause: Option<GameOverCause>,
     pub game_over_boat: Option<BoatId>,
     pub rng: GameRng,
@@ -72,7 +70,6 @@ impl FishGameState {
         Self {
             tick: 0,
             phase: GamePhase::Running,
-            phase_prev: GamePhase::Running,
             game_over_cause: None,
             game_over_boat: None,
             rng,
@@ -100,25 +97,10 @@ impl FishGameState {
     /// callers observe it through the returned reference (no event stream).
     pub fn tick(&mut self, input: FishGameInput) -> &FishGameState {
         self.tick = self.tick.wrapping_add(1);
-        self.phase_prev = self.phase;
 
-        handle_lifecycle_input(self, &input);
-
-        if self.phase == GamePhase::Running {
-            tick_running(self, &input);
-        } else if self.phase == GamePhase::GameOver {
-            // Boats continue sailing off and reel-in completes, but no more
-            // collisions / scoring / spawns.
-            let dt = self.config.dt();
-            boat::step_boats(dt, &mut self.boats, &mut self.hooks, &mut self.lines, &mut self.worms);
-            boat::step_reeling_hooks(dt, &mut self.hooks, &mut self.lines);
-            boat::despawn_offscreen_boats(
-                &self.config.arena,
-                &mut self.boats,
-                &mut self.hooks,
-                &mut self.lines,
-                &mut self.worms,
-            );
+        match self.phase {
+            GamePhase::Running => tick_running(self, &input),
+            GamePhase::GameOver => tick_game_over(self),
         }
 
         self
@@ -137,44 +119,6 @@ impl FishGameState {
     pub fn hook_world_pos(&self, hook_id: HookId) -> Option<Vec3> {
         self.hooks.get(hook_id).map(|h| h.pos)
     }
-}
-
-fn handle_lifecycle_input(state: &mut FishGameState, input: &FishGameInput) {
-    if input.restart {
-        restart(state);
-        return;
-    }
-
-    if input.pause_toggle {
-        match state.phase {
-            GamePhase::Running => state.phase = GamePhase::Paused,
-            GamePhase::Paused => state.phase = GamePhase::Running,
-            GamePhase::GameOver => {}
-        }
-    }
-}
-
-fn restart(state: &mut FishGameState) {
-    state.rng.reseed_from_self();
-    state.player = Player::new(&state.config.player);
-    state.boats.clear();
-    state.hooks.clear();
-    state.lines.clear();
-    state.worms.clear();
-    state.score = Score {
-        count: 0,
-        interval_ticks_remaining: state.config.score_interval_ticks,
-    };
-    state.difficulty = Difficulty {
-        multiplier: 1,
-        interval_ticks_remaining: state.config.difficulty_interval_ticks,
-    };
-    state.spawn_ticks = SpawnTicks {
-        boats_interval_remaining: state.config.boat_spawn_interval_ticks,
-    };
-    state.phase = GamePhase::Running;
-    state.game_over_cause = None;
-    state.game_over_boat = None;
 }
 
 fn tick_running(state: &mut FishGameState, input: &FishGameInput) {
@@ -197,6 +141,27 @@ fn tick_running(state: &mut FishGameState, input: &FishGameInput) {
     // 4. CalculateCollisions.
     clamp_player_to_arena(state);
     check_collisions(state);
+}
+
+/// After GameOver, boats continue sailing off and reel-in completes, but no
+/// more collisions / scoring / spawns / player movement.
+fn tick_game_over(state: &mut FishGameState) {
+    let dt = state.config.dt();
+    boat::step_boats(
+        dt,
+        &mut state.boats,
+        &mut state.hooks,
+        &mut state.lines,
+        &mut state.worms,
+    );
+    boat::step_reeling_hooks(dt, &mut state.hooks, &mut state.lines);
+    boat::despawn_offscreen_boats(
+        &state.config.arena,
+        &mut state.boats,
+        &mut state.hooks,
+        &mut state.lines,
+        &mut state.worms,
+    );
 }
 
 fn tick_score_and_difficulty(state: &mut FishGameState) {
