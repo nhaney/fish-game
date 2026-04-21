@@ -115,13 +115,17 @@ impl LocalScores {
         }
     }
 
-    pub fn add_new_score(&mut self, score: u32, score_saved_events: &mut EventWriter<ScoreSaved>) {
+    pub fn add_new_score(
+        &mut self,
+        score: u32,
+        score_saved_events: &mut MessageWriter<ScoreSaved>,
+    ) {
         self.scores.push(score);
         self.scores.sort();
         self.scores.reverse();
         self.save_scores();
 
-        score_saved_events.send(ScoreSaved {
+        score_saved_events.write(ScoreSaved {
             score,
             score_index: self.scores.iter().position(|&r| r == score).unwrap(),
         });
@@ -134,7 +138,7 @@ impl Default for LocalScores {
     }
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 pub struct ScoreSaved {
     score: u32,
     score_index: usize,
@@ -149,15 +153,15 @@ impl Plugin for LeaderboardPlugin {
                 Update,
                 (update_local_scores_system).in_set(stages::HandleEventsSet),
             )
-            .add_event::<ScoreSaved>();
+            .add_message::<ScoreSaved>();
     }
 }
 
 pub fn update_local_scores_system(
     core: Res<CoreState>,
-    mut game_over_reader: EventReader<GameOver>,
+    mut game_over_reader: MessageReader<GameOver>,
     mut local_scores: ResMut<LocalScores>,
-    mut score_saved_events: EventWriter<ScoreSaved>,
+    mut score_saved_events: MessageWriter<ScoreSaved>,
 ) {
     if let Some(_game_over_event) = game_over_reader.read().next() {
         let final_score = core.state.score.count;

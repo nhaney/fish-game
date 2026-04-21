@@ -17,7 +17,6 @@
 //!     simulation ends cleanly; the new one starts at tick 0.
 
 use bevy::prelude::*;
-use bevy_prototype_lyon::prelude::*;
 use fish_game_core::boat::{BoatId, HookId, LineId, WormId};
 use fish_game_core::{
     CoreEvent, FishGameConfig, FishGameInput, FishGameState, GameOverCause, GamePhase,
@@ -25,9 +24,7 @@ use fish_game_core::{
 use rand::{thread_rng, Rng};
 use std::collections::BTreeMap;
 
-use crate::player::events::{
-    PlayerAte, PlayerBonked, PlayerBoosted, PlayerHooked, PlayerStarved,
-};
+use crate::player::events::{PlayerAte, PlayerBonked, PlayerBoosted, PlayerHooked, PlayerStarved};
 use crate::shared::collision::Collider;
 use crate::shared::game::{GameOver, GamePaused, GameRestarted, GameUnpaused};
 use crate::shared::render::RenderLayer;
@@ -77,26 +74,47 @@ pub struct CoreEntityMap {
     pub worms: BTreeMap<WormId, Entity>,
 }
 
-/// Resource holding the lyon stroke color / texture handles for hook / line /
-/// worm rendering. Built from `AssetServer` at startup.
+/// Resource holding the texture handles for boat / hook / worm rendering
+/// plus the cached mesh + material used to draw the fishing line. Built from
+/// `AssetServer` at startup.
 #[derive(Resource)]
 pub struct BoatAssets {
     pub boat: Handle<Image>,
     pub hook: Handle<Image>,
     pub worm_frame1: Handle<Image>,
     pub worm_frame2: Handle<Image>,
-    pub line_color: Color,
+    pub line_mesh: Handle<Mesh>,
+    pub line_material: Handle<ColorMaterial>,
 }
+
+const LINE_THICKNESS: f32 = 1.0;
 
 impl FromWorld for BoatAssets {
     fn from_world(world: &mut World) -> Self {
-        let asset_server = world.get_resource::<AssetServer>().unwrap();
+        let boat: Handle<Image>;
+        let hook: Handle<Image>;
+        let worm_frame1: Handle<Image>;
+        let worm_frame2: Handle<Image>;
+        {
+            let asset_server = world.get_resource::<AssetServer>().unwrap();
+            boat = asset_server.load("sprites/boat/boat.png");
+            hook = asset_server.load("sprites/hook/hook.png");
+            worm_frame1 = asset_server.load("sprites/worm/worm1.png");
+            worm_frame2 = asset_server.load("sprites/worm/worm2.png");
+        }
+        let line_mesh = world
+            .resource_mut::<Assets<Mesh>>()
+            .add(Rectangle::new(1.0, 1.0));
+        let line_material = world
+            .resource_mut::<Assets<ColorMaterial>>()
+            .add(ColorMaterial::from(Color::BLACK));
         Self {
-            boat: asset_server.load("sprites/boat/boat.png"),
-            hook: asset_server.load("sprites/hook/hook.png"),
-            worm_frame1: asset_server.load("sprites/worm/worm1.png"),
-            worm_frame2: asset_server.load("sprites/worm/worm2.png"),
-            line_color: Color::BLACK,
+            boat,
+            hook,
+            worm_frame1,
+            worm_frame2,
+            line_mesh,
+            line_material,
         }
     }
 }
@@ -117,7 +135,12 @@ impl Plugin for CorePlugin {
 
         app.add_systems(
             FixedUpdate,
-            (tick_core_from_input, forward_core_events, sync_ecs_from_core).chain(),
+            (
+                tick_core_from_input,
+                forward_core_events,
+                sync_ecs_from_core,
+            )
+                .chain(),
         );
     }
 }
@@ -184,64 +207,52 @@ fn forward_core_events(
     core: Res<CoreState>,
     control: Res<CoreControl>,
     map: Res<CoreEntityMap>,
-    mut ev_boosted: EventWriter<PlayerBoosted>,
-    mut ev_hooked: EventWriter<PlayerHooked>,
-    mut ev_bonked: EventWriter<PlayerBonked>,
-    mut ev_starved: EventWriter<PlayerStarved>,
-    mut ev_ate: EventWriter<PlayerAte>,
-    mut ev_game_over: EventWriter<GameOver>,
-    mut ev_restart: EventWriter<GameRestarted>,
-    mut ev_paused: EventWriter<GamePaused>,
-    mut ev_unpaused: EventWriter<GameUnpaused>,
+    mut ev_boosted: MessageWriter<PlayerBoosted>,
+    mut ev_hooked: MessageWriter<PlayerHooked>,
+    mut ev_bonked: MessageWriter<PlayerBonked>,
+    mut ev_starved: MessageWriter<PlayerStarved>,
+    mut ev_ate: MessageWriter<PlayerAte>,
+    mut ev_game_over: MessageWriter<GameOver>,
+    mut ev_restart: MessageWriter<GameRestarted>,
+    mut ev_paused: MessageWriter<GamePaused>,
+    mut ev_unpaused: MessageWriter<GameUnpaused>,
     mut prev_paused: Local<bool>,
 ) {
     for event in &core.state.events {
         match event {
             CoreEvent::PlayerBoosted => {
-                ev_boosted.send(PlayerBoosted {
+                ev_boosted.write(PlayerBoosted {
                     player: Entity::PLACEHOLDER,
                 });
             }
             CoreEvent::PlayerAte { worm } => {
-                let worm_entity = map
-                    .worms
-                    .get(worm)
-                    .copied()
-                    .unwrap_or(Entity::PLACEHOLDER);
-                ev_ate.send(PlayerAte {
+                let worm_entity = map.worms.get(worm).copied().unwrap_or(Entity::PLACEHOLDER);
+                ev_ate.write(PlayerAte {
                     player_entity: Entity::PLACEHOLDER,
                     worm_entity,
                 });
             }
             CoreEvent::PlayerHooked { hook, .. } => {
-                let hook_entity = map
-                    .hooks
-                    .get(hook)
-                    .copied()
-                    .unwrap_or(Entity::PLACEHOLDER);
-                ev_hooked.send(PlayerHooked {
+                let hook_entity = map.hooks.get(hook).copied().unwrap_or(Entity::PLACEHOLDER);
+                ev_hooked.write(PlayerHooked {
                     player_entity: Entity::PLACEHOLDER,
                     hook_entity,
                 });
             }
             CoreEvent::PlayerBonked { boat } => {
-                let boat_entity = map
-                    .boats
-                    .get(boat)
-                    .copied()
-                    .unwrap_or(Entity::PLACEHOLDER);
-                ev_bonked.send(PlayerBonked {
+                let boat_entity = map.boats.get(boat).copied().unwrap_or(Entity::PLACEHOLDER);
+                ev_bonked.write(PlayerBonked {
                     player_entity: Entity::PLACEHOLDER,
                     boat_entity,
                 });
             }
             CoreEvent::PlayerStarved => {
-                ev_starved.send(PlayerStarved {
+                ev_starved.write(PlayerStarved {
                     player_entity: Entity::PLACEHOLDER,
                 });
             }
             CoreEvent::GameOver { .. } => {
-                ev_game_over.send(GameOver { winning_boat: None });
+                ev_game_over.write(GameOver { winning_boat: None });
             }
             // Entity-lifecycle + score/difficulty events are consumed by
             // `sync_ecs_from_core` and UI code that reads `CoreState`
@@ -262,14 +273,14 @@ fn forward_core_events(
 
     // Pause / restart stay adapter-local — core has no concept of them.
     if control.paused && !*prev_paused {
-        ev_paused.send(GamePaused);
+        ev_paused.write(GamePaused);
     } else if !control.paused && *prev_paused {
-        ev_unpaused.send(GameUnpaused);
+        ev_unpaused.write(GameUnpaused);
     }
     *prev_paused = control.paused;
 
     if control.restart_fired {
-        ev_restart.send(GameRestarted);
+        ev_restart.write(GameRestarted);
     }
 }
 
@@ -299,20 +310,17 @@ fn sync_ecs_from_core(
         } else {
             let entity = commands
                 .spawn((
-                    SpriteBundle {
-                        texture: assets.boat.clone(),
-                        sprite: Sprite {
-                            custom_size: Some(Vec2::new(boat.width, boat.height)),
-                            ..Default::default()
-                        },
-                        transform: Transform {
-                            translation: boat.pos,
-                            rotation: if boat.facing_right {
-                                Quat::IDENTITY
-                            } else {
-                                Quat::from_rotation_y(std::f32::consts::PI)
-                            },
-                            ..Default::default()
+                    Sprite {
+                        image: assets.boat.clone(),
+                        custom_size: Some(Vec2::new(boat.width, boat.height)),
+                        ..Default::default()
+                    },
+                    Transform {
+                        translation: boat.pos,
+                        rotation: if boat.facing_right {
+                            Quat::IDENTITY
+                        } else {
+                            Quat::from_rotation_y(std::f32::consts::PI)
                         },
                         ..Default::default()
                     },
@@ -331,7 +339,7 @@ fn sync_ecs_from_core(
         if state.boats.contains_key(*bid) {
             true
         } else {
-            commands.entity(*entity).despawn_recursive();
+            commands.entity(*entity).despawn();
             false
         }
     });
@@ -345,15 +353,12 @@ fn sync_ecs_from_core(
         } else {
             let entity = commands
                 .spawn((
-                    SpriteBundle {
-                        texture: assets.hook.clone(),
-                        sprite: Sprite {
-                            custom_size: Some(Vec2::new(hook.width, hook.height)),
-                            ..Default::default()
-                        },
-                        transform: Transform::from_translation(hook.pos),
+                    Sprite {
+                        image: assets.hook.clone(),
+                        custom_size: Some(Vec2::new(hook.width, hook.height)),
                         ..Default::default()
                     },
+                    Transform::from_translation(hook.pos),
                     Collider {
                         width: hook.width,
                         height: hook.height,
@@ -369,7 +374,7 @@ fn sync_ecs_from_core(
         if state.hooks.contains_key(*hid) {
             true
         } else {
-            commands.entity(*entity).despawn_recursive();
+            commands.entity(*entity).despawn();
             false
         }
     });
@@ -383,15 +388,12 @@ fn sync_ecs_from_core(
         } else {
             let entity = commands
                 .spawn((
-                    SpriteBundle {
-                        texture: assets.worm_frame1.clone(),
-                        sprite: Sprite {
-                            custom_size: Some(Vec2::new(worm.width, worm.height)),
-                            ..Default::default()
-                        },
-                        transform: Transform::from_translation(worm.pos),
+                    Sprite {
+                        image: assets.worm_frame1.clone(),
+                        custom_size: Some(Vec2::new(worm.width, worm.height)),
                         ..Default::default()
                     },
+                    Transform::from_translation(worm.pos),
                     Collider {
                         width: worm.width,
                         height: worm.height,
@@ -407,36 +409,35 @@ fn sync_ecs_from_core(
         if state.worms.contains_key(*wid) {
             true
         } else {
-            commands.entity(*entity).despawn_recursive();
+            commands.entity(*entity).despawn();
             false
         }
     });
 
     // --- Lines ---
-    // Re-draw every frame since the endpoints move; cheaper than diffing.
+    // Draw each fishing line as a unit-size Rectangle mesh, rotated + scaled
+    // to span `start_pos → end_pos`. Cheaper than rebuilding a path every
+    // frame.
     for (lid, line) in state.lines.iter() {
-        let mut builder = PathBuilder::new();
-        builder.move_to(Vec2::new(line.start_pos.x, line.start_pos.y));
-        builder.line_to(Vec2::new(line.end_pos.x, line.end_pos.y));
-        let path = builder.build();
-
-        let stroke = Stroke {
-            color: assets.line_color,
-            options: StrokeOptions::default()
-                .with_line_width(1.0)
-                .with_line_cap(LineCap::Round)
-                .with_line_join(LineJoin::Round),
+        let delta = line.end_pos.truncate() - line.start_pos.truncate();
+        let length = delta.length();
+        let midpoint = (line.start_pos + line.end_pos) * 0.5;
+        let transform = Transform {
+            translation: midpoint,
+            rotation: Quat::from_rotation_z(delta.to_angle()),
+            scale: Vec3::new(length, LINE_THICKNESS, 1.0),
         };
 
         if let Some(&entity) = map.lines.get(&lid) {
-            commands
-                .entity(entity)
-                .insert((ShapeBundle { path, ..default() }, stroke));
+            if let Ok(mut tf) = transforms.get_mut(entity) {
+                *tf = transform;
+            }
         } else {
             let entity = commands
                 .spawn((
-                    ShapeBundle { path, ..default() },
-                    stroke,
+                    Mesh2d(assets.line_mesh.clone()),
+                    MeshMaterial2d(assets.line_material.clone()),
+                    transform,
                     LineMarker(lid),
                 ))
                 .id();
@@ -447,7 +448,7 @@ fn sync_ecs_from_core(
         if state.lines.contains_key(*lid) {
             true
         } else {
-            commands.entity(*entity).despawn_recursive();
+            commands.entity(*entity).despawn();
             false
         }
     });
@@ -478,7 +479,7 @@ pub fn sync_player_transform(
     core: Res<CoreState>,
     mut q: Query<&mut Transform, With<PlayerMarker>>,
 ) {
-    let Ok(mut tf) = q.get_single_mut() else {
+    let Ok(mut tf) = q.single_mut() else {
         return;
     };
     tf.translation = core.state.player.pos;

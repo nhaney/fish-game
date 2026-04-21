@@ -27,51 +27,51 @@ impl FromWorld for SfxHandles {
 // TODO: See if this can be reduced
 #[allow(clippy::too_many_arguments)]
 pub(super) fn play_sfx_system(
-    mut player_hooked_reader: EventReader<PlayerHooked>,
-    mut player_starved_reader: EventReader<PlayerStarved>,
-    mut player_bonked_reader: EventReader<PlayerBonked>,
-    mut player_ate_reader: EventReader<PlayerAte>,
-    mut player_boosted_reader: EventReader<PlayerBoosted>,
+    mut player_hooked_reader: MessageReader<PlayerHooked>,
+    mut player_starved_reader: MessageReader<PlayerStarved>,
+    mut player_bonked_reader: MessageReader<PlayerBonked>,
+    mut player_ate_reader: MessageReader<PlayerAte>,
+    mut player_boosted_reader: MessageReader<PlayerBoosted>,
     sfx_handles: Res<SfxHandles>,
     mut commands: Commands,
 ) {
     for _ in player_hooked_reader.read() {
         debug!("Playing hooked sound effect");
-        commands.spawn(AudioBundle {
-            source: sfx_handles.hooked.clone(),
-            settings: PlaybackSettings::DESPAWN,
-        });
+        commands.spawn((
+            AudioPlayer::new(sfx_handles.hooked.clone()),
+            PlaybackSettings::DESPAWN,
+        ));
     }
 
     for _ in player_starved_reader.read() {
         debug!("Playing starved sound effect");
-        commands.spawn(AudioBundle {
-            source: sfx_handles.starved.clone(),
-            settings: PlaybackSettings::DESPAWN,
-        });
+        commands.spawn((
+            AudioPlayer::new(sfx_handles.starved.clone()),
+            PlaybackSettings::DESPAWN,
+        ));
     }
 
     for _ in player_bonked_reader.read() {
         debug!("Playing bonked sound effect");
-        commands.spawn(AudioBundle {
-            source: sfx_handles.bonked.clone(),
-            settings: PlaybackSettings::DESPAWN,
-        });
+        commands.spawn((
+            AudioPlayer::new(sfx_handles.bonked.clone()),
+            PlaybackSettings::DESPAWN,
+        ));
     }
 
     for _ in player_ate_reader.read() {
         debug!("Playing ate sound effect");
-        commands.spawn(AudioBundle {
-            source: sfx_handles.eat.clone(),
-            settings: PlaybackSettings::DESPAWN,
-        });
+        commands.spawn((
+            AudioPlayer::new(sfx_handles.eat.clone()),
+            PlaybackSettings::DESPAWN,
+        ));
     }
 
     for _ in player_boosted_reader.read() {
         debug!("Playing boosted sound effect");
-        commands.spawn(AudioBundle {
-            source: sfx_handles.boost.clone(),
-            settings: PlaybackSettings::DESPAWN,
-        });
+        commands.spawn((
+            AudioPlayer::new(sfx_handles.boost.clone()),
+            PlaybackSettings::DESPAWN,
+        ));
     }
 }

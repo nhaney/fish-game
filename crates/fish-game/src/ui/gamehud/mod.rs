@@ -47,25 +47,22 @@ fn compose_game_hud(
     pause_root_query: Query<Entity, With<PauseButton>>,
 ) {
     let score_text_root_node = score_root_query
-        .get_single()
+        .single()
         .expect("Could not find score text root node to compose into game HUD");
 
     let pause_root_node = pause_root_query
-        .get_single()
+        .single()
         .expect("Could not find game over message root node to compose into gameover HUD");
 
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    justify_content: JustifyContent::SpaceBetween,
-                    ..Default::default()
-                },
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::SpaceBetween,
                 ..Default::default()
             },
             GameHudRoot,
         ))
-        .push_children(&[score_text_root_node, pause_root_node]);
+        .add_children(&[score_text_root_node, pause_root_node]);
 }

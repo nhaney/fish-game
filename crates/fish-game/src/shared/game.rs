@@ -4,16 +4,16 @@ use bevy::prelude::*;
 // emitting these — they are derived from `CoreState` / `CoreControl`, never
 // from legacy Bevy state.
 
-#[derive(Default, Event)]
+#[derive(Default, Message)]
 pub struct GameOver {
     pub winning_boat: Option<Entity>,
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct GamePaused;
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct GameUnpaused;
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct GameRestarted;

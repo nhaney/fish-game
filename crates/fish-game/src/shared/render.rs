@@ -20,7 +20,7 @@ impl FromWorld for FontHandles {
 
 pub(super) fn scale_camera_to_screen_size(
     arena: Res<Arena>,
-    mut resize_event_reader: EventReader<WindowResized>,
+    mut resize_event_reader: MessageReader<WindowResized>,
     mut query: Query<(&Camera, &MainCamera, &mut Transform)>,
 ) {
     if let Some(resize_event) = resize_event_reader.read().next() {
@@ -31,7 +31,7 @@ pub(super) fn scale_camera_to_screen_size(
         );
 
         let (_, _, mut camera_transform) = query
-            .get_single_mut()
+            .single_mut()
             .expect("Could not find camera to resize.");
 
         camera_transform.scale = scale;

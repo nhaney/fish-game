@@ -18,11 +18,12 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         debug!("Building player plugin...");
         app.init_resource::<render::PlayerStateAnimations>()
-            .add_event::<events::PlayerHooked>()
-            .add_event::<events::PlayerStarved>()
-            .add_event::<events::PlayerBonked>()
-            .add_event::<events::PlayerAte>()
-            .add_event::<events::PlayerBoosted>()
+            .init_resource::<render::BoostTrackerAssets>()
+            .add_message::<events::PlayerHooked>()
+            .add_message::<events::PlayerStarved>()
+            .add_message::<events::PlayerBonked>()
+            .add_message::<events::PlayerAte>()
+            .add_message::<events::PlayerBoosted>()
             .add_systems(Startup, init_player)
             .add_systems(
                 Update,
@@ -55,10 +56,12 @@ fn init_player(
     core: Res<CoreState>,
     fonts: Res<FontHandles>,
     player_state_animations: Res<render::PlayerStateAnimations>,
+    tracker_assets: Res<render::BoostTrackerAssets>,
 ) {
     let player_entity = spawn_player_entity(&mut commands, &core, &player_state_animations);
     render::spawn_player_boost_trackers(
         &mut commands,
+        &tracker_assets,
         core.state.config.player.width,
         core.state.config.player.height,
         core.state.config.player.max_boosts,
@@ -72,17 +75,19 @@ fn reset_player(
     core: Res<CoreState>,
     fonts: Res<FontHandles>,
     player_state_animations: Res<render::PlayerStateAnimations>,
-    mut restart_reader: EventReader<GameRestarted>,
+    tracker_assets: Res<render::BoostTrackerAssets>,
+    mut restart_reader: MessageReader<GameRestarted>,
     player_query: Query<Entity, With<PlayerMarker>>,
 ) {
     if restart_reader.read().next().is_some() {
         for player_entity in player_query.iter() {
-            commands.entity(player_entity).despawn_recursive();
+            commands.entity(player_entity).despawn();
         }
 
         let new_player = spawn_player_entity(&mut commands, &core, &player_state_animations);
         render::spawn_player_boost_trackers(
             &mut commands,
+            &tracker_assets,
             core.state.config.player.width,
             core.state.config.player.height,
             core.state.config.player.max_boosts,
@@ -110,12 +115,9 @@ fn spawn_player_entity(
         .spawn((
             PlayerMarker,
             RenderLayer::Player,
-            SpriteBundle {
-                texture: first_animation_frame.material_handle.clone(),
-                sprite: Sprite {
-                    custom_size: Some(Vec2::new(width, height)),
-                    ..Default::default()
-                },
+            Sprite {
+                image: first_animation_frame.material_handle.clone(),
+                custom_size: Some(Vec2::new(width, height)),
                 ..Default::default()
             },
             AnimationState {

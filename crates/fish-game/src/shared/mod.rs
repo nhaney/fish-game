@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_prototype_lyon::prelude::*;
 
 pub mod animation;
 pub mod arena;
@@ -13,9 +12,6 @@ pub struct SharedPlugin;
 impl Plugin for SharedPlugin {
     fn build(&self, app: &mut App) {
         info!("Building shared plugin...");
-
-        // Add plugin to render shapes with bevy_prototype_lyon.
-        app.add_plugins(ShapePlugin);
 
         app.init_resource::<render::FontHandles>();
 
@@ -56,10 +52,10 @@ impl Plugin for SharedPlugin {
 
         // Gameplay-lifecycle events. The adapter emits them; UI / animations /
         // audio consume them.
-        app.add_event::<game::GameOver>()
-            .add_event::<game::GamePaused>()
-            .add_event::<game::GameUnpaused>()
-            .add_event::<game::GameRestarted>();
+        app.add_message::<game::GameOver>()
+            .add_message::<game::GamePaused>()
+            .add_message::<game::GameUnpaused>()
+            .add_message::<game::GameRestarted>();
 
         // Presentation-only systems.
         app.add_systems(
@@ -78,5 +74,5 @@ impl Plugin for SharedPlugin {
 pub struct MainCamera;
 
 fn initialize_game(mut commands: Commands) {
-    commands.spawn((Camera2dBundle::default(), MainCamera));
+    commands.spawn((Camera2d, MainCamera));
 }

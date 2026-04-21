@@ -23,15 +23,12 @@ pub fn initialize_arena(mut commands: Commands) {
     };
 
     commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::rgb_u8(173, 216, 230),
-                custom_size: Some(Vec2::new(arena.width, arena.height)),
-                ..Default::default()
-            },
-            transform: Transform::from_translation(Vec3::new(0.0, arena.offset, 0.0)),
+        Sprite {
+            color: Color::srgb_u8(173, 216, 230),
+            custom_size: Some(Vec2::new(arena.width, arena.height)),
             ..Default::default()
         },
+        Transform::from_translation(Vec3::new(0.0, arena.offset, 0.0)),
         RenderLayer::Background,
     ));
 

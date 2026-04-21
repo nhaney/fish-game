@@ -16,7 +16,7 @@ edition = "2021"
 fish-game-core = { path = "crates/fish-game-core" }
 fish-game-replay = { path = "crates/fish-game-replay" }
 
-glam = { version = "0.25", default-features = false, features = ["libm", "serde"] }
+glam = { version = "0.30", default-features = false, features = ["libm", "serde"] }
 rand = "0.8.5"
 rand_chacha = { version = "0.3.1", features = ["serde1"] }
 serde = { version = "1.0", features = ["derive"] }

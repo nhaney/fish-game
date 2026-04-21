@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy::utils::Duration;
+use std::time::Duration;
 
 use crate::core_adapter::{CoreControl, CoreState};
 use fish_game_core::GamePhase;
@@ -47,19 +47,19 @@ pub(super) fn animation_system(
     time: Res<Time>,
     core: Res<CoreState>,
     control: Res<CoreControl>,
-    mut query: Query<(&mut AnimationState, &mut Handle<Image>)>,
+    mut query: Query<(&mut AnimationState, &mut Sprite)>,
 ) {
     if control.paused || core.state.phase != GamePhase::Running {
         return;
     }
 
-    for (mut animation_state, mut material_handle) in query.iter_mut() {
+    for (mut animation_state, mut sprite) in query.iter_mut() {
         let speed_multiplier = animation_state.speed_multiplier;
         animation_state.timer.tick(Duration::from_secs_f32(
             time.delta().as_secs_f32() * speed_multiplier,
         ));
 
-        if animation_state.timer.finished() {
+        if animation_state.timer.is_finished() {
             let cur_animation = &animation_state.animation;
             let cur_frame = animation_state.frame_index;
             let num_frames = cur_animation.frames.len();
@@ -79,7 +79,7 @@ pub(super) fn animation_system(
                 .set_duration(Duration::from_secs_f32(next_frame.time));
             animation_state.timer.reset();
 
-            *material_handle = next_frame.material_handle.clone();
+            sprite.image = next_frame.material_handle.clone();
         }
     }
 }

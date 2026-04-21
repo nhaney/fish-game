@@ -32,19 +32,17 @@ pub(super) fn setup_pause_button(
     pause_button_materials: Res<PauseButtonMaterials>,
 ) {
     commands.spawn((
-        ButtonBundle {
-            style: Style {
-                width: Val::Px(64.0),
-                height: Val::Px(64.0),
-                margin: UiRect {
-                    right: Val::Percent(5.0),
-                    ..Default::default()
-                },
+        Button,
+        Node {
+            width: Val::Px(64.0),
+            height: Val::Px(64.0),
+            margin: UiRect {
+                right: Val::Percent(5.0),
                 ..Default::default()
             },
-            image: UiImage::new(pause_button_materials.pause.clone()),
             ..Default::default()
         },
+        ImageNode::new(pause_button_materials.pause.clone()),
         PauseButton { is_paused: false },
     ));
 }
@@ -58,7 +56,7 @@ pub(super) fn pause_button_system(
     mut control: ResMut<CoreControl>,
     pause_button_materials: Res<PauseButtonMaterials>,
     mut interaction_query: Query<
-        (&Interaction, &mut UiImage, &mut PauseButton),
+        (&Interaction, &mut ImageNode, &mut PauseButton),
         Changed<Interaction>,
     >,
 ) {
@@ -66,12 +64,12 @@ pub(super) fn pause_button_system(
         return;
     }
 
-    for (interaction, mut ui_image, mut pause_button) in interaction_query.iter_mut() {
+    for (interaction, mut image_node, mut pause_button) in interaction_query.iter_mut() {
         if let Interaction::Pressed = *interaction {
             if pause_button.is_paused {
-                ui_image.texture = pause_button_materials.pause.clone();
+                image_node.image = pause_button_materials.pause.clone();
             } else {
-                ui_image.texture = pause_button_materials.play.clone();
+                image_node.image = pause_button_materials.play.clone();
             }
             pause_button.is_paused = !pause_button.is_paused;
             control.pause_toggle_pending = true;
@@ -85,12 +83,12 @@ pub(super) fn pause_button_system(
 pub(super) fn sync_pause_button_to_control(
     control: Res<CoreControl>,
     pause_button_materials: Res<PauseButtonMaterials>,
-    mut pause_button_query: Query<(&mut UiImage, &mut PauseButton)>,
+    mut pause_button_query: Query<(&mut ImageNode, &mut PauseButton)>,
 ) {
-    for (mut ui_image, mut pause_button) in pause_button_query.iter_mut() {
+    for (mut image_node, mut pause_button) in pause_button_query.iter_mut() {
         if pause_button.is_paused != control.paused {
             pause_button.is_paused = control.paused;
-            ui_image.texture = if control.paused {
+            image_node.image = if control.paused {
                 pause_button_materials.play.clone()
             } else {
                 pause_button_materials.pause.clone()
@@ -100,15 +98,14 @@ pub(super) fn sync_pause_button_to_control(
 }
 
 pub(super) fn reset_pause_button_on_restart(
-    mut restart_reader: EventReader<GameRestarted>,
+    mut restart_reader: MessageReader<GameRestarted>,
     pause_button_materials: Res<PauseButtonMaterials>,
-    mut pause_button_query: Query<(&mut UiImage, &mut PauseButton)>,
+    mut pause_button_query: Query<(&mut ImageNode, &mut PauseButton)>,
 ) {
     if restart_reader.read().next().is_some() {
-        for (mut ui_image, mut pause_button) in pause_button_query.iter_mut() {
-            ui_image.texture = pause_button_materials.pause.clone();
+        for (mut image_node, mut pause_button) in pause_button_query.iter_mut() {
+            image_node.image = pause_button_materials.pause.clone();
             pause_button.is_paused = false;
         }
     }
 }
-

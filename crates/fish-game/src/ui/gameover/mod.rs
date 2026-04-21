@@ -48,40 +48,36 @@ fn compose_gameover_hud(
     message_root_query: Query<Entity, With<GameOverMessageRootNode>>,
 ) {
     let leaderboard_root_node = leaderboard_root_query
-        .get_single()
+        .single()
         .expect("Could not find leaderboard root node to compose into gameover HUD");
 
     let game_over_message_root_node = message_root_query
-        .get_single()
+        .single()
         .expect("Could not find game over message root node to compose into gameover HUD");
 
     let dummy = commands
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 flex_grow: 1.,
                 flex_shrink: 1.,
                 flex_basis: Val::Px(0.),
                 ..default()
             },
-            visibility: Visibility::Hidden,
-            ..default()
-        })
+            Visibility::Hidden,
+        ))
         .id();
 
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::Center,
-                    ..Default::default()
-                },
-                visibility: Visibility::Visible,
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::SpaceBetween,
+                align_items: AlignItems::Center,
                 ..Default::default()
             },
+            Visibility::Visible,
             GameOverHudRoot,
         ))
-        .push_children(&[leaderboard_root_node, game_over_message_root_node, dummy]);
+        .add_children(&[leaderboard_root_node, game_over_message_root_node, dummy]);
 }

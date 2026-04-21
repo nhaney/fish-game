@@ -1,8 +1,8 @@
+use bevy::color::palettes::css::{HOT_PINK, PINK, RED};
 use bevy::prelude::*;
-use bevy::utils::Duration;
-use bevy_prototype_lyon::prelude::*;
 use fish_game_core::player::PlayerState as CorePlayerState;
 use std::collections::HashMap;
+use std::time::Duration;
 
 use crate::core_adapter::{CoreState, PlayerMarker};
 use crate::shared::{
@@ -10,6 +10,37 @@ use crate::shared::{
     game::{GameOver, GameRestarted},
     render::FontHandles,
 };
+
+/// Cached meshes / materials for the boost-tracker dots (filled circle + ring
+/// outline). Built once on startup so spawn sites stay terse.
+#[derive(Resource)]
+pub(super) struct BoostTrackerAssets {
+    pub fill_mesh: Handle<Mesh>,
+    pub border_mesh: Handle<Mesh>,
+    pub fill_material: Handle<ColorMaterial>,
+    pub border_material: Handle<ColorMaterial>,
+}
+
+impl FromWorld for BoostTrackerAssets {
+    fn from_world(world: &mut World) -> Self {
+        let fill_mesh = world.resource_mut::<Assets<Mesh>>().add(Circle::new(4.0));
+        let border_mesh = world
+            .resource_mut::<Assets<Mesh>>()
+            .add(Annulus::new(4.5, 5.0));
+        let fill_material = world
+            .resource_mut::<Assets<ColorMaterial>>()
+            .add(ColorMaterial::from(Color::from(PINK)));
+        let border_material = world
+            .resource_mut::<Assets<ColorMaterial>>()
+            .add(ColorMaterial::from(Color::from(HOT_PINK)));
+        Self {
+            fill_mesh,
+            border_mesh,
+            fill_material,
+            border_material,
+        }
+    }
+}
 
 #[derive(Resource)]
 pub(super) struct PlayerStateAnimations {
@@ -83,7 +114,7 @@ pub(super) fn player_state_animation_change_system(
     mut last_state: Local<Option<CorePlayerState>>,
     mut query: Query<&mut AnimationState, With<PlayerMarker>>,
 ) {
-    let Ok(mut animation_state) = query.get_single_mut() else {
+    let Ok(mut animation_state) = query.single_mut() else {
         return;
     };
     let current = core.state.player.state;
@@ -114,14 +145,12 @@ pub(super) struct BoostTrackerBorder;
 
 pub(super) fn spawn_player_boost_trackers(
     commands: &mut Commands,
+    assets: &BoostTrackerAssets,
     player_width: f32,
     player_height: f32,
     max_boosts: u8,
     player_entity: Entity,
 ) {
-    let tracker_color = Color::PINK;
-    let tracker_border_color = Color::rgb_u8(255, 105, 180);
-
     debug!("Adding boost trackers for player {:?}...", player_entity);
 
     let extended_width = player_width * 1.5;
@@ -137,42 +166,22 @@ pub(super) fn spawn_player_boost_trackers(
     let mut boost_trackers: Vec<Entity> = Vec::new();
 
     for (i, tracker_position) in tracker_positions.into_iter().enumerate() {
-        let tracker_border_shape = GeometryBuilder::build_as(&shapes::Circle {
-            radius: 5.0,
-            center: Vec2::ZERO,
-        });
+        let transform = Transform::from_xyz(tracker_position.x, tracker_position.y, 1.0);
 
         let tracker_border_entity = commands
             .spawn((
-                ShapeBundle {
-                    path: tracker_border_shape,
-                    spatial: SpatialBundle {
-                        transform: Transform::from_xyz(tracker_position.x, tracker_position.y, 1.0),
-                        ..default()
-                    },
-                    ..default()
-                },
-                Stroke::color(tracker_border_color),
+                Mesh2d(assets.border_mesh.clone()),
+                MeshMaterial2d(assets.border_material.clone()),
+                transform,
                 BoostTrackerBorder,
             ))
             .id();
 
-        let tracker_shape = GeometryBuilder::build_as(&shapes::Circle {
-            radius: 4.0,
-            center: Vec2::ZERO,
-        });
-
         let tracker_entity = commands
             .spawn((
-                ShapeBundle {
-                    path: tracker_shape,
-                    spatial: SpatialBundle {
-                        transform: Transform::from_xyz(tracker_position.x, tracker_position.y, 1.0),
-                        ..default()
-                    },
-                    ..default()
-                },
-                Fill::color(tracker_color),
+                Mesh2d(assets.fill_mesh.clone()),
+                MeshMaterial2d(assets.fill_material.clone()),
+                transform,
                 BoostTracker { index: i as u8 },
             ))
             .id();
@@ -182,7 +191,7 @@ pub(super) fn spawn_player_boost_trackers(
 
     commands
         .entity(player_entity)
-        .push_children(boost_trackers.as_slice());
+        .add_children(boost_trackers.as_slice());
 }
 
 pub(super) fn update_tracker_display_from_boost_supply(
@@ -201,13 +210,13 @@ pub(super) fn update_tracker_display_from_boost_supply(
 
 pub(super) fn despawn_trackers_on_gameover_or_restart(
     mut commands: Commands,
-    mut game_over_reader: EventReader<GameOver>,
-    mut game_restarted_reader: EventReader<GameRestarted>,
+    mut game_over_reader: MessageReader<GameOver>,
+    mut game_restarted_reader: MessageReader<GameRestarted>,
     boost_tracker_query: Query<Entity, Or<(With<BoostTracker>, With<BoostTrackerBorder>)>>,
 ) {
     if game_over_reader.read().next().is_some() || game_restarted_reader.read().next().is_some() {
         for boost_tracker in boost_tracker_query.iter() {
-            commands.entity(boost_tracker).despawn_recursive();
+            commands.entity(boost_tracker).despawn();
         }
     }
 }
@@ -222,24 +231,20 @@ pub(super) fn add_countdown_text(
 ) {
     commands.entity(player_entity).with_children(|builder| {
         builder.spawn((
-            Text2dBundle {
-                transform: Transform {
-                    translation: Vec3::new(0., 50., 1.),
-                    scale: Vec3::ONE * 0.25,
-                    ..default()
-                },
-                text: Text::from_section(
-                    "30.0".to_string(),
-                    TextStyle {
-                        font: fonts.main_font.clone(),
-                        font_size: 70.0,
-                        ..Default::default()
-                    },
-                )
-                .with_justify(JustifyText::Center),
-                visibility: Visibility::Visible,
+            Text2d::new("30.0"),
+            TextFont {
+                font: fonts.main_font.clone(),
+                font_size: 70.0,
+                ..Default::default()
+            },
+            TextColor(Color::from(PINK)),
+            TextLayout::new_with_justify(Justify::Center),
+            Transform {
+                translation: Vec3::new(0., 50., 1.),
+                scale: Vec3::ONE * 0.25,
                 ..default()
             },
+            Visibility::Visible,
             PlayerCountdownText,
         ));
     });
@@ -247,22 +252,22 @@ pub(super) fn add_countdown_text(
 
 pub(super) fn update_coundown_text_system(
     core: Res<CoreState>,
-    mut text_query: Query<&mut Text, With<PlayerCountdownText>>,
+    mut text_query: Query<(&mut Text2d, &mut TextColor), With<PlayerCountdownText>>,
 ) {
     let tick_rate = core.state.config.tick_rate as f32;
     let seconds_left = core.state.player.hunger_ticks_remaining as f32 / tick_rate;
-    for mut text in text_query.iter_mut() {
-        text.sections[0].value = format!("{:.1}", seconds_left);
-        if seconds_left < 5.0 {
-            text.sections[0].style.color = Color::RED;
+    for (mut text, mut color) in text_query.iter_mut() {
+        **text = format!("{:.1}", seconds_left);
+        color.0 = if seconds_left < 5.0 {
+            Color::from(RED)
         } else {
-            text.sections[0].style.color = Color::PINK;
-        }
+            Color::from(PINK)
+        };
     }
 }
 
 pub(super) fn hide_countdown_on_game_over(
-    mut game_over_reader: EventReader<GameOver>,
+    mut game_over_reader: MessageReader<GameOver>,
     mut countdown_text_query: Query<&mut Visibility, With<PlayerCountdownText>>,
 ) {
     if game_over_reader.read().next().is_some() {
@@ -273,7 +278,7 @@ pub(super) fn hide_countdown_on_game_over(
 }
 
 pub(super) fn show_countdown_on_restart(
-    mut restart_reader: EventReader<GameRestarted>,
+    mut restart_reader: MessageReader<GameRestarted>,
     mut countdown_text_query: Query<&mut Visibility, With<PlayerCountdownText>>,
 ) {
     if restart_reader.read().next().is_some() {
