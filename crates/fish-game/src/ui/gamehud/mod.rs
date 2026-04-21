@@ -30,6 +30,7 @@ impl Plugin for GameHudPlugin {
                     score::update_score_text,
                     score::change_color_on_game_over,
                     score::revert_color_on_restart,
+                    pause::sync_pause_button_to_control,
                     pause::reset_pause_button_on_restart,
                 ),
             );

@@ -8,10 +8,8 @@ use std::{
 
 use bevy::prelude::*;
 
-use crate::shared::{
-    game::{GameOver, Score},
-    stages,
-};
+use crate::core_adapter::CoreState;
+use crate::shared::{game::GameOver, stages};
 
 #[derive(Deserialize, Serialize, Resource)]
 pub struct LocalScores {
@@ -156,16 +154,17 @@ impl Plugin for LeaderboardPlugin {
 }
 
 pub fn update_local_scores_system(
-    score: Res<Score>,
+    core: Res<CoreState>,
     mut game_over_reader: EventReader<GameOver>,
     mut local_scores: ResMut<LocalScores>,
     mut score_saved_events: EventWriter<ScoreSaved>,
 ) {
     if let Some(_game_over_event) = game_over_reader.read().next() {
+        let final_score = core.state.score.count;
         debug!(
-            "Saving score new score ({:?}) to file {:?}",
-            score.count, local_scores.lookup
+            "Saving new score ({:?}) to file {:?}",
+            final_score, local_scores.lookup
         );
-        local_scores.add_new_score(score.count, &mut score_saved_events);
+        local_scores.add_new_score(final_score, &mut score_saved_events);
     }
 }

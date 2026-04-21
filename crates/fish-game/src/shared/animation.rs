@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy::utils::Duration;
 
-use super::game::GameState;
+use crate::core_adapter::{CoreControl, CoreState};
+use fish_game_core::GamePhase;
 
 /**
 Represents one frame of animation.
@@ -44,10 +45,11 @@ impl AnimationState {
 /// Transitions the animation state if it is time for the next frame
 pub(super) fn animation_system(
     time: Res<Time>,
-    game_state: Res<GameState>,
+    core: Res<CoreState>,
+    control: Res<CoreControl>,
     mut query: Query<(&mut AnimationState, &mut Handle<Image>)>,
 ) {
-    if !game_state.is_running() {
+    if control.paused || core.state.phase != GamePhase::Running {
         return;
     }
 

@@ -1,6 +1,8 @@
 use bevy::prelude::*;
+use fish_game_core::GamePhase;
 
-use crate::shared::game::{GamePaused, GameRestarted, GameState, GameStates, GameUnpaused};
+use crate::core_adapter::{CoreControl, CoreState};
+use crate::shared::game::GameRestarted;
 
 #[derive(Debug, Clone, Resource)]
 pub(super) struct PauseButtonMaterials {
@@ -47,17 +49,20 @@ pub(super) fn setup_pause_button(
     ));
 }
 
+/// The button routes clicks to `CoreControl.pause_toggle_pending`, which the
+/// adapter consumes on the next tick. The adapter then emits the Bevy
+/// `GamePaused` / `GameUnpaused` events — this system just asks; it doesn't
+/// decide.
 pub(super) fn pause_button_system(
-    game_state: Res<GameState>,
+    core: Res<CoreState>,
+    mut control: ResMut<CoreControl>,
     pause_button_materials: Res<PauseButtonMaterials>,
-    mut game_paused_events: ResMut<Events<GamePaused>>,
-    mut game_unpaused_events: ResMut<Events<GameUnpaused>>,
     mut interaction_query: Query<
         (&Interaction, &mut UiImage, &mut PauseButton),
         Changed<Interaction>,
     >,
 ) {
-    if let GameStates::GameOver = game_state.cur_state {
+    if core.state.phase == GamePhase::GameOver {
         return;
     }
 
@@ -65,16 +70,35 @@ pub(super) fn pause_button_system(
         if let Interaction::Pressed = *interaction {
             if pause_button.is_paused {
                 ui_image.texture = pause_button_materials.pause.clone();
-                game_unpaused_events.send(GameUnpaused);
             } else {
                 ui_image.texture = pause_button_materials.play.clone();
-                game_paused_events.send(GamePaused);
             }
-
             pause_button.is_paused = !pause_button.is_paused;
+            control.pause_toggle_pending = true;
         }
     }
 }
+
+/// Keep the button sprite in sync with the adapter's pause state — covers the
+/// keyboard-shortcut path (Escape) so the icon flips even though the button
+/// wasn't clicked.
+pub(super) fn sync_pause_button_to_control(
+    control: Res<CoreControl>,
+    pause_button_materials: Res<PauseButtonMaterials>,
+    mut pause_button_query: Query<(&mut UiImage, &mut PauseButton)>,
+) {
+    for (mut ui_image, mut pause_button) in pause_button_query.iter_mut() {
+        if pause_button.is_paused != control.paused {
+            pause_button.is_paused = control.paused;
+            ui_image.texture = if control.paused {
+                pause_button_materials.play.clone()
+            } else {
+                pause_button_materials.pause.clone()
+            };
+        }
+    }
+}
+
 pub(super) fn reset_pause_button_on_restart(
     mut restart_reader: EventReader<GameRestarted>,
     pause_button_materials: Res<PauseButtonMaterials>,
@@ -87,3 +111,4 @@ pub(super) fn reset_pause_button_on_restart(
         }
     }
 }
+

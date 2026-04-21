@@ -19,7 +19,9 @@
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::*;
 use fish_game_core::boat::{BoatId, HookId, LineId, WormId};
-use fish_game_core::{CoreEvent, FishGameConfig, FishGameInput, FishGameState, GamePhase};
+use fish_game_core::{
+    CoreEvent, FishGameConfig, FishGameInput, FishGameState, GameOverCause, GamePhase,
+};
 use rand::{thread_rng, Rng};
 use std::collections::BTreeMap;
 
@@ -468,10 +470,24 @@ pub struct PlayerMarker;
 
 /// Sync the player's `Transform` from the core state. Called in `Update`
 /// after `FixedUpdate` so the render frame sees the latest tick's position.
+///
+/// Rotation is fully derived from the core: during Running, it tracks the
+/// player's facing direction; at game over, if the player starved, we flip
+/// upside-down as a cosmetic "belly-up" cue (the core freezes the position).
 pub fn sync_player_transform(
     core: Res<CoreState>,
     mut q: Query<&mut Transform, With<PlayerMarker>>,
 ) {
-    let Ok(mut tf) = q.get_single_mut() else { return; };
+    let Ok(mut tf) = q.get_single_mut() else {
+        return;
+    };
     tf.translation = core.state.player.pos;
+
+    tf.rotation = if core.state.game_over_cause == Some(GameOverCause::Starved) {
+        Quat::from_rotation_x(std::f32::consts::PI)
+    } else if core.state.player.facing_right {
+        Quat::IDENTITY
+    } else {
+        Quat::from_rotation_y(std::f32::consts::PI)
+    };
 }

@@ -5,8 +5,8 @@ use bevy::{
     window::{PresentMode, WindowMode},
 };
 mod audio;
+mod core_adapter;
 mod leaderboard;
-mod objects;
 mod player;
 mod shared;
 mod ui;
@@ -49,9 +49,9 @@ fn main() {
         .add_plugins((
             default_plugins,
             shared::SharedPlugin,
+            core_adapter::CorePlugin,
             leaderboard::LeaderboardPlugin,
             player::PlayerPlugin,
-            objects::ObjectPlugins,
             ui::UIPlugin,
             audio::AudioPlugin,
         ));
