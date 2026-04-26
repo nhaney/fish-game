@@ -16,8 +16,10 @@
 //!   - Restart ⇒ rebuild `CoreState` with a freshly-derived seed. The old
 //!     simulation ends cleanly; the new one starts at tick 0.
 
+pub mod game_over;
+
 use bevy::prelude::*;
-use fish_game_core::boat::{BoatId, HookId, LineId, WormId};
+use fish_game_core::boat::{BoatId, HookId, LineId, WormId, HOOK_SIZE};
 use fish_game_core::{
     CoreEvent, FishGameConfig, FishGameInput, FishGameState, GameOverCause, GamePhase,
 };
@@ -28,6 +30,9 @@ use crate::player::events::{PlayerAte, PlayerBonked, PlayerBoosted, PlayerHooked
 use crate::shared::collision::Collider;
 use crate::shared::game::{GameOver, GamePaused, GameRestarted, GameUnpaused};
 use crate::shared::render::RenderLayer;
+use crate::shared::stages;
+
+use game_over::GameOverWindDownPlugin;
 
 /// Resource wrapping the deterministic simulation — the single source of
 /// truth. Presentation reads `state` and forwards `state.events` after each
@@ -119,6 +124,23 @@ impl FromWorld for BoatAssets {
     }
 }
 
+/// Endpoints that anchor a fishing-line entity's transform. Populated once at
+/// spawn; read every frame by `sync_line_transforms_from_endpoints` to compute
+/// the line's midpoint, angle, and length from the current Bevy `Transform`s
+/// of the boat and hook. This works both during Running (transforms come from
+/// `sync_ecs_from_core`) and during GameOver (transforms come from
+/// `drift_boats_off_arena` / `advance_reeling_hooks`).
+#[derive(Component)]
+pub struct LineEndpoints {
+    /// The boat entity whose translation + `rod_tip_offset` gives the line start.
+    pub boat_entity: Entity,
+    /// The hook entity whose translation (+ HOOK_SIZE/2 in Y) gives the line end.
+    pub hook_entity: Entity,
+    /// Fixed world-space offset from the boat's translation to the rod tip,
+    /// computed once at spawn when `line.start_pos - boat.pos` is stable.
+    pub rod_tip_offset: Vec3,
+}
+
 pub struct CorePlugin;
 
 impl Plugin for CorePlugin {
@@ -142,6 +164,17 @@ impl Plugin for CorePlugin {
             )
                 .chain(),
         );
+
+        // Line transforms are derived from their boat + hook Transforms, which
+        // are updated either by sync_ecs_from_core (Running) or by the
+        // game-over wind-down systems (GameOver). Must run late in Update so
+        // both sources have already written their transforms this frame.
+        app.add_systems(
+            Update,
+            sync_line_transforms_from_endpoints.in_set(stages::PrepareRenderSet),
+        );
+
+        app.add_plugins(GameOverWindDownPlugin);
     }
 }
 
@@ -252,7 +285,12 @@ fn forward_core_events(
                 });
             }
             CoreEvent::GameOver { .. } => {
-                ev_game_over.write(GameOver { winning_boat: None });
+                // Resolve the winning boat entity from the core state.
+                let winning_boat = core
+                    .state
+                    .game_over_boat
+                    .and_then(|bid| map.boats.get(&bid).copied());
+                ev_game_over.write(GameOver { winning_boat });
             }
             // Entity-lifecycle + score/difficulty events are consumed by
             // `sync_ecs_from_core` and UI code that reads `CoreState`
@@ -261,11 +299,8 @@ fn forward_core_events(
             CoreEvent::ScoreIncremented { .. }
             | CoreEvent::DifficultyIncreased { .. }
             | CoreEvent::BoatSpawned(_)
-            | CoreEvent::BoatDespawned(_)
             | CoreEvent::HookSpawned(_)
-            | CoreEvent::HookDespawned(_)
             | CoreEvent::LineSpawned(_)
-            | CoreEvent::LineDespawned(_)
             | CoreEvent::WormSpawned(_)
             | CoreEvent::WormDespawned(_) => {}
         }
@@ -285,8 +320,11 @@ fn forward_core_events(
 }
 
 /// Spawn/despawn Bevy entities so they mirror the core slotmaps, and update
-/// their `Transform`s from core positions each tick. Also owns the rod/line
-/// stroke re-draw.
+/// their `Transform`s from core positions each tick.
+///
+/// Returns early once the core enters `GamePhase::GameOver` — at that point
+/// the game-over wind-down module (`game_over.rs`) owns all `Transform`
+/// updates and entity despawning for boats, hooks, lines, and worms.
 fn sync_ecs_from_core(
     mut commands: Commands,
     core: Res<CoreState>,
@@ -295,6 +333,10 @@ fn sync_ecs_from_core(
     mut transforms: Query<&mut Transform>,
 ) {
     let state = &core.state;
+
+    if state.phase == GamePhase::GameOver {
+        return;
+    }
 
     // --- Boats ---
     for (bid, boat) in state.boats.iter() {
@@ -415,34 +457,60 @@ fn sync_ecs_from_core(
     });
 
     // --- Lines ---
-    // Draw each fishing line as a unit-size Rectangle mesh, rotated + scaled
-    // to span `start_pos → end_pos`. Cheaper than rebuilding a path every
-    // frame.
+    // Each line entity stores `LineEndpoints` so `sync_line_transforms_from_endpoints`
+    // can recompute its transform from the current boat and hook Transforms —
+    // this works both during Running and during the game-over wind-down.
     for (lid, line) in state.lines.iter() {
+        if map.lines.contains_key(&lid) {
+            // Already exists — transform updated by sync_line_transforms_from_endpoints.
+            continue;
+        }
+
+        // Compute the stable rod-tip offset from the boat center.
+        let rod_tip_offset = if let Some(boat) = state.boats.get(line.boat_id) {
+            line.start_pos - boat.pos
+        } else {
+            Vec3::ZERO
+        };
+
+        // Find the hook entity that corresponds to this line.
+        let hook_entity = state
+            .hooks
+            .iter()
+            .find(|(_, h)| h.line_id == lid)
+            .and_then(|(hid, _)| map.hooks.get(&hid).copied())
+            .unwrap_or(Entity::PLACEHOLDER);
+
+        let boat_entity = map
+            .boats
+            .get(&line.boat_id)
+            .copied()
+            .unwrap_or(Entity::PLACEHOLDER);
+
+        // Compute an initial transform so the line is visible on the first frame.
         let delta = line.end_pos.truncate() - line.start_pos.truncate();
         let length = delta.length();
         let midpoint = (line.start_pos + line.end_pos) * 0.5;
-        let transform = Transform {
+        let initial_transform = Transform {
             translation: midpoint,
             rotation: Quat::from_rotation_z(delta.to_angle()),
             scale: Vec3::new(length, LINE_THICKNESS, 1.0),
         };
 
-        if let Some(&entity) = map.lines.get(&lid) {
-            if let Ok(mut tf) = transforms.get_mut(entity) {
-                *tf = transform;
-            }
-        } else {
-            let entity = commands
-                .spawn((
-                    Mesh2d(assets.line_mesh.clone()),
-                    MeshMaterial2d(assets.line_material.clone()),
-                    transform,
-                    LineMarker(lid),
-                ))
-                .id();
-            map.lines.insert(lid, entity);
-        }
+        let entity = commands
+            .spawn((
+                Mesh2d(assets.line_mesh.clone()),
+                MeshMaterial2d(assets.line_material.clone()),
+                initial_transform,
+                LineMarker(lid),
+                LineEndpoints {
+                    boat_entity,
+                    hook_entity,
+                    rod_tip_offset,
+                },
+            ))
+            .id();
+        map.lines.insert(lid, entity);
     }
     map.lines.retain(|lid, entity| {
         if state.lines.contains_key(*lid) {
@@ -452,6 +520,36 @@ fn sync_ecs_from_core(
             false
         }
     });
+}
+
+/// Recomputes each fishing-line's `Transform` from the current Bevy `Transform`s
+/// of its anchoring boat and hook. Runs in `PrepareRenderSet` so it sees
+/// transforms that were updated earlier this frame — whether from
+/// `sync_ecs_from_core` (Running) or from the game-over wind-down systems.
+fn sync_line_transforms_from_endpoints(
+    mut lines: Query<(&LineEndpoints, &mut Transform)>,
+    entities: Query<&Transform, Without<LineEndpoints>>,
+) {
+    for (endpoints, mut line_tf) in &mut lines {
+        let Ok(boat_tf) = entities.get(endpoints.boat_entity) else {
+            continue;
+        };
+        let Ok(hook_tf) = entities.get(endpoints.hook_entity) else {
+            continue;
+        };
+
+        let start = boat_tf.translation + endpoints.rod_tip_offset;
+        let end = hook_tf.translation + Vec3::new(0.0, HOOK_SIZE / 2.0, 0.0);
+
+        let delta = (end - start).truncate();
+        let length = delta.length();
+        let midpoint = (start + end) * 0.5;
+        *line_tf = Transform {
+            translation: midpoint,
+            rotation: Quat::from_rotation_z(delta.to_angle()),
+            scale: Vec3::new(length, LINE_THICKNESS, 1.0),
+        };
+    }
 }
 
 #[derive(Component)]

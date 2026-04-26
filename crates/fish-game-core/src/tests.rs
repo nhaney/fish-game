@@ -12,7 +12,7 @@
 use glam::Vec3;
 
 use crate::{
-    boat::{Boat, BoatId, BoatType, Hook, HookId, Line, LineId, Worm, WormId, HOOK_SIZE, WORM_SIZE},
+    boat::{Boat, BoatId, BoatType, Hook, HookId, Line, LineId, Worm, WormId, WORM_SIZE, HOOK_SIZE},
     config::FishGameConfig,
     events::CoreEvent,
     input::FishGameInput,
@@ -41,8 +41,6 @@ fn insert_boat(state: &mut FishGameState, pos: Vec3, width: f32, height: f32) ->
         hook_ids: Vec::new(),
         line_ids: Vec::new(),
         worm_ids: Vec::new(),
-        exiting: false,
-        winner: false,
     })
 }
 
@@ -62,8 +60,6 @@ fn insert_hook(state: &mut FishGameState, pos: Vec3, boat_id: BoatId) -> HookId 
         line_id,
         width: HOOK_SIZE,
         height: HOOK_SIZE,
-        reel_velocity: None,
-        reel_destination: None,
     });
     if let Some(boat) = state.boats.get_mut(boat_id) {
         boat.hook_ids.push(hook_id);
@@ -123,19 +119,6 @@ fn player_overlapping_hook_triggers_hooked_game_over() {
     assert_eq!(state.phase, GamePhase::GameOver);
     assert_eq!(state.game_over_cause, Some(GameOverCause::Hooked));
     assert_eq!(state.game_over_boat, Some(bid));
-}
-
-#[test]
-fn hook_reels_in_after_player_hooked() {
-    let mut state = fresh();
-    state.player.pos = Vec3::ZERO;
-    let bid = insert_boat(&mut state, Vec3::new(0.0, 200.0, 0.0), 40.0, 10.0);
-    let hid = insert_hook(&mut state, Vec3::ZERO, bid);
-
-    state.tick(FishGameInput::default());
-    let hook = state.hooks.get(hid).expect("hook still present after hook event");
-    assert!(hook.reel_velocity.is_some(), "reel-in should have started");
-    assert!(hook.reel_destination.is_some());
 }
 
 // ---------- collision: worm -------------------------------------------------
@@ -411,6 +394,28 @@ fn game_over_freezes_player_position_and_velocity() {
 }
 
 #[test]
+fn game_over_freezes_boat_positions() {
+    // After GameOver, boats must not move — the simulation is a no-op.
+    let mut state = fresh();
+    let bid = insert_boat(&mut state, Vec3::new(100.0, 200.0, 0.0), 40.0, 10.0);
+    state.boats.get_mut(bid).unwrap().velocity = Vec3::new(50.0, 0.0, 0.0);
+
+    state.player.hunger_ticks_remaining = 1;
+    state.tick(FishGameInput::default());
+    assert_eq!(state.phase, GamePhase::GameOver);
+
+    let boat_pos = state.boats.get(bid).unwrap().pos;
+    for _ in 0..30 {
+        state.tick(FishGameInput::default());
+    }
+    assert_eq!(
+        state.boats.get(bid).unwrap().pos,
+        boat_pos,
+        "boat should not move post game-over",
+    );
+}
+
+#[test]
 fn game_over_clears_all_worms() {
     let mut state = fresh();
     state.player.pos = Vec3::ZERO;
@@ -664,4 +669,55 @@ fn game_over_emits_worm_despawned_for_every_remaining_worm() {
         .collect();
     assert!(despawned.contains(&w1));
     assert!(despawned.contains(&w2));
+}
+
+// ---------- reel math -------------------------------------------------------
+
+#[test]
+fn reel_zero_distance_is_immediate_arrival() {
+    use crate::reel::{advance, ReelMotion};
+    let pos = Vec3::new(5.0, 5.0, 0.0);
+    let motion = ReelMotion::toward(pos, pos, 300.0);
+    let (new_pos, arrived) = advance(pos, motion, 1.0 / 60.0);
+    assert!(arrived, "same-point reel-in must arrive immediately");
+    assert_eq!(new_pos, pos);
+}
+
+#[test]
+fn reel_midpoint_advance_respects_dt() {
+    use crate::reel::{advance, ReelMotion};
+    let from = Vec3::new(0.0, 0.0, 0.0);
+    let to = Vec3::new(1000.0, 0.0, 0.0);
+    let speed = 300.0;
+    let dt = 1.0 / 60.0;
+    let motion = ReelMotion::toward(from, to, speed);
+    let (new_pos, arrived) = advance(from, motion, dt);
+    assert!(!arrived, "should not have arrived yet");
+    let expected_x = speed * dt;
+    let diff = (new_pos.x - expected_x).abs();
+    assert!(diff < 0.001, "position should advance by speed*dt: got {}, expected ~{}", new_pos.x, expected_x);
+}
+
+#[test]
+fn reel_arrival_radius_snaps_to_destination() {
+    use crate::reel::{advance, ReelMotion};
+    let from = Vec3::new(0.0, 0.0, 0.0);
+    let to = Vec3::new(5.0, 0.0, 0.0); // within default arrival_radius of 10
+    let motion = ReelMotion::toward(from, to, 300.0);
+    let (new_pos, arrived) = advance(from, motion, 1.0 / 60.0);
+    assert!(arrived);
+    assert_eq!(new_pos, to, "should snap to destination on arrival");
+}
+
+#[test]
+fn reel_zero_vector_source_no_nan() {
+    use crate::reel::{advance, ReelMotion};
+    // from == to: velocity becomes zero (vec3_normalize_or_zero returns ZERO).
+    let pos = Vec3::ZERO;
+    let motion = ReelMotion::toward(pos, pos, 300.0);
+    assert!(!motion.velocity.x.is_nan());
+    assert!(!motion.velocity.y.is_nan());
+    assert!(!motion.velocity.z.is_nan());
+    let (new_pos, _) = advance(pos, motion, 1.0 / 60.0);
+    assert!(!new_pos.x.is_nan());
 }

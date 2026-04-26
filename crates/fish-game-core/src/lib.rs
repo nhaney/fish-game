@@ -26,6 +26,7 @@ pub mod events;
 pub mod input;
 pub mod math;
 pub mod player;
+pub mod reel;
 pub mod rng;
 pub mod state;
 

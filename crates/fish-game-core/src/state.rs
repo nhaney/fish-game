@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use slotmap::SlotMap;
 
 use crate::boat::{
-    self, Boat, BoatId, Hook, HookId, Line, LineId, Worm, WormId, HOOK_SIZE,
+    self, Boat, BoatId, Hook, HookId, Line, LineId, Worm, WormId,
 };
 use crate::collision::aabb_overlap;
 use crate::config::FishGameConfig;
@@ -112,7 +112,9 @@ impl FishGameState {
 
         match self.phase {
             GamePhase::Running => tick_running(self, &input),
-            GamePhase::GameOver => tick_game_over(self),
+            // After game over, the sim freezes. Boat motion, hook reel-in, and
+            // offscreen despawn move to the Bevy presentation layer.
+            GamePhase::GameOver => {}
         }
 
         self
@@ -153,30 +155,6 @@ fn tick_running(state: &mut FishGameState, input: &FishGameInput) {
     // 4. CalculateCollisions.
     clamp_player_to_arena(state);
     check_collisions(state);
-}
-
-/// After GameOver, boats continue sailing off and reel-in completes, but no
-/// more collisions / scoring / spawns / player movement.
-fn tick_game_over(state: &mut FishGameState) {
-    let dt = state.config.dt();
-    boat::step_boats(
-        dt,
-        &mut state.boats,
-        &mut state.hooks,
-        &mut state.lines,
-        &mut state.worms,
-    );
-    boat::step_reeling_hooks(dt, &mut state.hooks, &mut state.lines);
-    let despawned = boat::despawn_offscreen_boats(
-        &state.config.arena,
-        &mut state.boats,
-        &mut state.hooks,
-        &mut state.lines,
-        &mut state.worms,
-    );
-    for d in &despawned {
-        emit_despawned_boat(&mut state.events, d);
-    }
 }
 
 fn tick_score_and_difficulty(state: &mut FishGameState) {
@@ -271,19 +249,6 @@ fn emit_spawned_boat(events: &mut Vec<CoreEvent>, spawned: &boat::SpawnedBoat) {
     }
 }
 
-fn emit_despawned_boat(events: &mut Vec<CoreEvent>, despawned: &boat::DespawnedBoat) {
-    for &wid in &despawned.worm_ids {
-        events.push(CoreEvent::WormDespawned(wid));
-    }
-    for &hid in &despawned.hook_ids {
-        events.push(CoreEvent::HookDespawned(hid));
-    }
-    for &lid in &despawned.line_ids {
-        events.push(CoreEvent::LineDespawned(lid));
-    }
-    events.push(CoreEvent::BoatDespawned(despawned.boat_id));
-}
-
 fn tick_player_input_movement(state: &mut FishGameState, input: &FishGameInput) {
     if state.player.state == PlayerState::Boost {
         return;
@@ -346,7 +311,6 @@ fn integrate_positions(state: &mut FishGameState, dt: f32) {
         &mut state.lines,
         &mut state.worms,
     );
-    boat::step_reeling_hooks(dt, &mut state.hooks, &mut state.lines);
 }
 
 fn clamp_player_to_arena(state: &mut FishGameState) {
@@ -395,7 +359,6 @@ fn check_collisions(state: &mut FishGameState) {
             .events
             .push(CoreEvent::PlayerHooked { hook: hid, boat: boat_id });
         enter_game_over(state, GameOverCause::Hooked, boat_id);
-        boat::start_reel_in(hid, &mut state.hooks, &state.lines);
         return;
     }
 
@@ -452,8 +415,7 @@ fn enter_game_over(state: &mut FishGameState, cause: GameOverCause, boat: Option
     for wid in removed_worms {
         state.events.push(CoreEvent::WormDespawned(wid));
     }
-    boat::trigger_boat_exit(boat, &mut state.boats);
-    // Freeze player velocity — post-death "animation" is presentation.
+    // Freeze player — post-death boat motion and reel-in are presentation.
     state.player.velocity = Vec3::ZERO;
     state.player.boost_data = None;
 
@@ -531,14 +493,11 @@ fn hash_state(state: &FishGameState, h: &mut FxHasher) {
         h.write_u32(boat.hook_ids.len() as u32);
         h.write_u32(boat.line_ids.len() as u32);
         h.write_u32(boat.worm_ids.len() as u32);
-        h.write_bool(boat.exiting);
-        h.write_bool(boat.winner);
     }
 
     h.write_u32(state.hooks.len() as u32);
     for (_, hook) in state.hooks.iter() {
         hash_vec3(hook.pos, h);
-        h.write_bool(hook.reel_velocity.is_some());
     }
 
     h.write_u32(state.worms.len() as u32);
@@ -552,8 +511,7 @@ fn hash_state(state: &FishGameState, h: &mut FxHasher) {
         hash_vec3(line.end_pos, h);
     }
 
-    // Mark unused imports as used in release builds.
-    let _ = HOOK_SIZE;
+    // Suppress "unused" lint for types only referenced in tests / other modules.
     let _: Option<ActiveBoost> = None;
     let _: Option<BoostCooldown> = None;
 }

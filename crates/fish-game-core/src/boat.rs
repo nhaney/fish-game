@@ -48,10 +48,6 @@ pub struct Boat {
     pub hook_ids: Vec<HookId>,
     pub line_ids: Vec<LineId>,
     pub worm_ids: Vec<WormId>,
-    /// Set to true after GameOver: boat is leaving the scene, no more reel-in.
-    pub exiting: bool,
-    /// If true, this boat "caught the fish" — stays on screen after GameOver.
-    pub winner: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,10 +57,6 @@ pub struct Hook {
     pub line_id: LineId,
     pub width: f32,
     pub height: f32,
-    /// During reel-in, the hook moves toward `reel_destination` at
-    /// `reel_velocity`. Both None during normal play (hook drifts with boat).
-    pub reel_velocity: Option<Vec3>,
-    pub reel_destination: Option<Vec3>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -142,15 +134,6 @@ pub struct SpawnedBoat {
     pub worm_ids: Vec<WormId>,
 }
 
-/// Outcome of a boat despawn — identifiers of everything removed so the
-/// caller can emit `*Despawned` events.
-pub struct DespawnedBoat {
-    pub boat_id: BoatId,
-    pub hook_ids: Vec<HookId>,
-    pub line_ids: Vec<LineId>,
-    pub worm_ids: Vec<WormId>,
-}
-
 /// Spawn a boat and all its children (rods, lines, hooks, worms) into the
 /// respective slotmaps. RNG draws here must match the original
 /// `spawn_boat`/`spawn_lines` order for replay compatibility with saved games
@@ -192,8 +175,6 @@ pub fn spawn_boat(
         hook_ids: Vec::new(),
         line_ids: Vec::new(),
         worm_ids: Vec::new(),
-        exiting: false,
-        winner: false,
     });
 
     let mut new_hook_ids = Vec::new();
@@ -256,8 +237,6 @@ pub fn spawn_boat(
             line_id,
             width: HOOK_SIZE,
             height: HOOK_SIZE,
-            reel_velocity: None,
-            reel_destination: None,
         });
 
         new_hook_ids.push(hook_id);
@@ -300,8 +279,8 @@ fn apply_boat_facing(boat_pos: Vec3, local: Vec3, facing_right: bool) -> Vec3 {
     Vec3::new(boat_pos.x + flipped_x, boat_pos.y + local.y, boat_pos.z + local.z)
 }
 
-/// Move boats and their attached entities by `dt`. Boats that reach off-screen
-/// are collected (caller despawns them along with their children).
+/// Move boats and their attached entities by `dt`. Also keeps each line's
+/// `end_pos` synced to its hook's current position.
 pub fn step_boats(
     dt: f32,
     boats: &mut SlotMap<BoatId, Boat>,
@@ -315,8 +294,12 @@ pub fn step_boats(
 
         for &hook_id in &boat.hook_ids {
             if let Some(hook) = hooks.get_mut(hook_id) {
-                if hook.reel_velocity.is_none() {
-                    hook.pos += dx;
+                hook.pos += dx;
+                // Keep line.end_pos synced to the top of the hook.
+                if let Some(line) = lines.get_mut(hook.line_id) {
+                    line.end_pos.x = hook.pos.x;
+                    line.end_pos.y = hook.pos.y + HOOK_SIZE / 2.0;
+                    line.end_pos.z = hook.pos.z;
                 }
             }
         }
@@ -328,137 +311,9 @@ pub fn step_boats(
         for &line_id in &boat.line_ids {
             if let Some(line) = lines.get_mut(line_id) {
                 line.start_pos += dx;
-                // end_pos is refreshed from the hook pos below.
             }
         }
     }
-}
-
-/// Move hooks that are in reel-in mode. Stops once they reach their destination.
-pub fn step_reeling_hooks(
-    dt: f32,
-    hooks: &mut SlotMap<HookId, Hook>,
-    lines: &mut SlotMap<LineId, Line>,
-) {
-    for (_, hook) in hooks.iter_mut() {
-        if let (Some(vel), Some(dest)) = (hook.reel_velocity, hook.reel_destination) {
-            hook.pos += vel * dt;
-
-            if math::vec3_length(dest - hook.pos) < 10.0 {
-                hook.pos = dest;
-                hook.reel_velocity = None;
-                hook.reel_destination = None;
-            }
-        }
-
-        // Keep the line's end synced with the hook (line attaches to top of hook).
-        if let Some(line) = lines.get_mut(hook.line_id) {
-            line.end_pos.x = hook.pos.x;
-            line.end_pos.y = hook.pos.y + HOOK_SIZE / 2.0;
-            line.end_pos.z = hook.pos.z;
-        }
-    }
-}
-
-/// Despawn boats that have travelled fully off-screen. A boat is considered
-/// off-screen when every one of its hooks is off-screen; iterating hooks by
-/// the boat's own `hook_ids` list (not by filtering the full slotmap) keeps
-/// this deterministic without any `HashMap`.
-pub fn despawn_offscreen_boats(
-    arena: &ArenaConfig,
-    boats: &mut SlotMap<BoatId, Boat>,
-    hooks: &mut SlotMap<HookId, Hook>,
-    lines: &mut SlotMap<LineId, Line>,
-    worms: &mut SlotMap<WormId, Worm>,
-) -> Vec<DespawnedBoat> {
-    let arena_half_width = arena.width / 2.0;
-    let mut boats_to_despawn: Vec<BoatId> = Vec::new();
-
-    for (boat_id, boat) in boats.iter() {
-        let boat_x = boat.pos.x;
-        let boat_off_screen = (boat_x + boat.width) < -arena_half_width
-            || (boat_x - boat.width) > arena_half_width;
-        if !boat_off_screen {
-            continue;
-        }
-
-        // All hooks must also be off-screen, matching the original behavior
-        // where the boat holds its children until they also pass off-screen.
-        if boat.hook_ids.is_empty() {
-            boats_to_despawn.push(boat_id);
-            continue;
-        }
-        let all_hooks_off = boat.hook_ids.iter().all(|hid| {
-            if let Some(h) = hooks.get(*hid) {
-                let hx = h.pos.x;
-                (hx + h.width) < -arena_half_width || (hx - h.width) > arena_half_width
-            } else {
-                true
-            }
-        });
-        if all_hooks_off {
-            boats_to_despawn.push(boat_id);
-        }
-    }
-
-    let mut despawned = Vec::with_capacity(boats_to_despawn.len());
-    for boat_id in boats_to_despawn {
-        if let Some(boat) = boats.remove(boat_id) {
-            for &hid in &boat.hook_ids {
-                hooks.remove(hid);
-            }
-            for &lid in &boat.line_ids {
-                lines.remove(lid);
-            }
-            for &wid in &boat.worm_ids {
-                worms.remove(wid);
-            }
-            despawned.push(DespawnedBoat {
-                boat_id,
-                hook_ids: boat.hook_ids,
-                line_ids: boat.line_ids,
-                worm_ids: boat.worm_ids,
-            });
-        }
-    }
-    despawned
-}
-
-/// On GameOver: turn every non-winning boat around and double its speed. The
-/// winner boat (the one holding the hooked fish) stops moving.
-pub fn trigger_boat_exit(winning_boat: Option<BoatId>, boats: &mut SlotMap<BoatId, Boat>) {
-    for (id, boat) in boats.iter_mut() {
-        boat.exiting = true;
-        if Some(id) == winning_boat {
-            boat.winner = true;
-            boat.velocity = Vec3::ZERO;
-            continue;
-        }
-
-        let speed_abs = boat.velocity.x.abs().max(1.0) * 2.0;
-        if boat.pos.x < 0.0 {
-            boat.facing_right = false;
-            boat.velocity.x = -speed_abs;
-        } else {
-            boat.facing_right = true;
-            boat.velocity.x = speed_abs;
-        }
-    }
-}
-
-/// Start reeling a specific hook back to its rod tip (where the line starts).
-/// Called when the player is hooked.
-pub fn start_reel_in(
-    hook_id: HookId,
-    hooks: &mut SlotMap<HookId, Hook>,
-    lines: &SlotMap<LineId, Line>,
-) {
-    let Some(hook) = hooks.get_mut(hook_id) else { return; };
-    let Some(line) = lines.get(hook.line_id) else { return; };
-
-    let dir = math::vec3_normalize_or_zero(line.start_pos - hook.pos);
-    hook.reel_velocity = Some(dir * 300.0);
-    hook.reel_destination = Some(line.start_pos);
 }
 
 /// Remove a single worm (player ate it). Returns `true` if the worm actually
@@ -513,3 +368,4 @@ pub fn spawn_random_boat(
     let stats = roll_boat_stats(difficulty, rng);
     spawn_boat(stats, &config.arena, rng, boats, hooks, lines, worms)
 }
+

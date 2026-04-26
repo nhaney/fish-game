@@ -15,7 +15,7 @@
 //! [`FishGameState::tick`]: crate::state::FishGameState::tick
 //! [`FishGameState::hash`]: crate::state::FishGameState::hash
 
-use crate::boat::{BoatId, HookId, LineId, WormId};
+use crate::boat::{BoatId, HookId, WormId};
 use crate::state::GameOverCause;
 
 /// A single transition observed during a tick. Ordered within a tick by
@@ -51,11 +51,8 @@ pub enum CoreEvent {
     // entities without having to diff slotmap membership.
 
     BoatSpawned(BoatId),
-    BoatDespawned(BoatId),
     HookSpawned(HookId),
-    HookDespawned(HookId),
-    LineSpawned(LineId),
-    LineDespawned(LineId),
+    LineSpawned(crate::boat::LineId),
     WormSpawned(WormId),
     WormDespawned(WormId),
 }
